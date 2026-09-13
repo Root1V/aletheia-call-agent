@@ -81,6 +81,16 @@ class EventBus:
         await self._redis.expire(clave, int(TTL_STREAM.total_seconds()))
         return ident
 
+    async def reset(self, call_id: str) -> None:
+        """Borra el historial de una llamada.
+
+        Una llamada nueva es una llamada nueva. Sin esto, reproducir dos veces
+        el mismo escenario apila los eventos de ambas en el mismo stream, y
+        como el número de secuencia reinicia en cada ejecución, el portal los
+        ordena intercalados y muestra cada turno por duplicado.
+        """
+        await self._redis.delete(clave_de_stream(call_id))
+
     async def history(self, call_id: str, *, limite: int = 5_000) -> list[tuple[str, BaseEvent]]:
         """Todo lo publicado hasta ahora, en orden.
 

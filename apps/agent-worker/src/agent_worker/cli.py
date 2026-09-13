@@ -35,6 +35,7 @@ async def reproducir(
     telefonia: bool,
     customer_id: str,
     agent_id: str,
+    espera_s: int,
 ) -> int:
     directorio = RAIZ_AUDIO / scenario_id
     if not directorio.exists():
@@ -60,8 +61,23 @@ async def reproducir(
     )
 
     canal = "telefonía 8 kHz" if telefonia else "micrófono 16 kHz"
-    print(f"Reproduciendo {scenario_id} · {canal} · velocidad {velocidad}×")
-    print(f"Abrir el portal en /llamadas/{call_id}\n")
+    print(f"Escenario: {scenario_id} · {canal} · velocidad {velocidad}×")
+    print()
+    print("  Abre esto en el navegador ANTES de que empiece:")
+    print(f"    http://localhost:5180/llamadas/{call_id}")
+    print()
+
+    # Cuenta atrás antes de arrancar.
+    #
+    # La transcripción sólo se ve aparecer si el portal ya está abierto cuando
+    # empieza la llamada. Quien llega tarde recibe el historial completo de
+    # golpe —que es lo correcto al reconectar— y concluye que no hay streaming.
+    if espera_s > 0:
+        for restante in range(espera_s, 0, -1):
+            print(f"  Empieza en {restante}…", end="\r", flush=True)
+            await asyncio.sleep(1)
+        print(" " * 30, end="\r")
+    print("  Llamada en curso.\n")
 
     try:
         await pipeline.start(room=f"replay-{scenario_id}")
@@ -91,6 +107,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Degrada el audio a 8 kHz µ-law, como una llamada real.",
     )
+    p.add_argument(
+        "--esperar",
+        type=int,
+        default=6,
+        help="Segundos de cuenta atrás antes de empezar, para abrir el portal. 0 lo desactiva.",
+    )
     p.add_argument("--customer-id", default="CUS000001")
     p.add_argument("--agent-id", default="dev-ejecutivo")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -109,6 +131,7 @@ def main(argv: list[str] | None = None) -> int:
             telefonia=args.telefonia,
             customer_id=args.customer_id,
             agent_id=args.agent_id,
+            espera_s=args.esperar,
         )
     )
 

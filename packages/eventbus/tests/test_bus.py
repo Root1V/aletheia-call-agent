@@ -160,3 +160,18 @@ async def test_un_evento_ilegible_no_tumba_el_stream(bus, call_id) -> None:
 
     await asyncio.wait_for(asyncio.create_task(consumir()), timeout=5)
     assert isinstance(recibidos[0], CallEnded)
+
+
+async def test_reset_deja_la_llamada_en_limpio(bus, call_id) -> None:
+    """Una llamada nueva es una llamada nueva.
+
+    Los identificadores de llamada de los escenarios son deterministas, así que
+    sin esto reproducir dos veces el mismo guion apila los eventos de ambas
+    ejecuciones en el mismo stream.
+    """
+    await bus.publish(CallEnded(call_id=call_id, duration_ms=1))
+    assert len(await bus.history(call_id)) == 1
+
+    await bus.reset(call_id)
+
+    assert await bus.history(call_id) == []

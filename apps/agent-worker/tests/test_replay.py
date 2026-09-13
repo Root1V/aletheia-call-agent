@@ -141,3 +141,41 @@ def test_la_secuencia_es_monotona(eventos) -> None:
     secuencias = [e.seq for e in eventos]
     assert secuencias == sorted(secuencias)
     assert len(set(secuencias)) == len(secuencias)
+
+
+async def test_reproducir_dos_veces_no_duplica_la_conversacion() -> None:
+    """El síntoma que se veía en el portal: cada mensaje dos veces seguidas.
+
+    Como el número de secuencia reinicia en cada ejecución, al ordenar por él
+    los turnos de las dos reproducciones quedaban ADYACENTES, que es lo que
+    hacía parecer que el reconocedor emitía cada frase por duplicado. El
+    arreglo va en el origen: el pipeline limpia el historial al arrancar.
+    """
+    call_id = f"test-dup-{uuid.uuid4().hex[:8]}"
+    bus = EventBus.desde_url(REDIS_URL, bloqueo_ms=500)
+
+    for _ in range(2):
+        adaptador = FileReplayAdapter(call_id, AUDIO, velocidad=40.0)
+        pipeline = CallPipeline(
+            call_id=call_id,
+            customer_id="CUS000001",
+            agent_id="test",
+            asr=SherpaStreamingASR(MODELO),
+            bus=bus,
+            ingress="file_replay",
+        )
+        await pipeline.start(room="test")
+        async for frame in adaptador.frames():
+            await pipeline.feed(frame)
+        await pipeline.stop()
+
+    historial = [e for _i, e in await bus.history(call_id)]
+    await bus.reset(call_id)
+    await bus.aclose()
+
+    inicios = [e for e in historial if isinstance(e, CallStarted)]
+    finales = [e for e in historial if isinstance(e, AsrFinal)]
+    textos = [e.text for e in finales]
+
+    assert len(inicios) == 1, f"{len(inicios)} llamadas en el mismo historial"
+    assert len(textos) == len(set(textos)), "hay turnos repetidos"

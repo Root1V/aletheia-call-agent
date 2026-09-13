@@ -22,7 +22,6 @@ export function LiveTranscript({
   turnos: Turno[];
   estado: "conectando" | "en_vivo" | "terminada" | "sin_conexion";
 }) {
-  const finRef = useRef<HTMLDivElement>(null);
   const contenedorRef = useRef<HTMLDivElement>(null);
   // Si el ejecutivo está al final, la vista sigue la conversación; si subió a
   // releer algo, se queda donde está.
@@ -41,18 +40,25 @@ export function LiveTranscript({
   };
 
   useEffect(() => {
-    if (!seguirRef.current) return;
-    // Salto instantáneo, no animado.
+    const c = contenedorRef.current;
+    if (!c || !seguirRef.current) return;
+    // Se mueve el contenedor directamente, no con scrollIntoView.
     //
-    // Un desplazamiento suave emite eventos de scroll durante toda su
-    // animación, y el manejador de arriba los lee como "el usuario subió":
-    // el propio auto-scroll se desactivaba solo a partir del segundo turno.
-    // Además, en una transcripción que crece cada pocos segundos la animación
-    // es ruido visual mientras el ejecutivo intenta leer.
-    finRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+    // scrollIntoView desplaza TODOS los ancestros con scroll, así que además
+    // del panel arrastraba la página entera. Y en su variante suave emite
+    // eventos de scroll durante toda la animación, que el manejador de arriba
+    // lee como "el usuario subió": el auto-scroll se desactivaba a sí mismo.
+    // Asignar scrollTop no tiene ninguno de los dos efectos.
+    c.scrollTop = c.scrollHeight;
   }, [turnos]);
 
-  const ordenados = [...turnos].sort((a, b) => a.seq - b.seq);
+  // Se respeta el orden de llegada, sin reordenar por número de secuencia.
+  //
+  // El stream ya entrega los eventos en orden, y el `seq` reinicia con cada
+  // llamada: ordenar por él intercalaba los turnos de dos reproducciones
+  // distintas dejándolos adyacentes, que era exactamente el síntoma de "cada
+  // mensaje sale dos veces seguidas".
+  const ordenados = turnos;
 
   return (
     <Card className="flex max-h-[32rem] flex-col">
@@ -75,7 +81,6 @@ export function LiveTranscript({
         ) : (
           ordenados.map((t) => <Burbuja key={t.turnId} turno={t} />)
         )}
-        <div ref={finRef} />
       </div>
     </Card>
   );

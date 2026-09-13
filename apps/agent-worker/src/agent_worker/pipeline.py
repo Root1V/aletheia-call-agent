@@ -95,7 +95,13 @@ class CallPipeline:
         self._seq += 1
         return self._seq
 
-    async def start(self, room: str) -> None:
+    async def start(self, room: str, *, limpiar_historial: bool = True) -> None:
+        # Empezar en limpio. El identificador de llamada de un escenario es
+        # determinista, así que sin esto una segunda reproducción se suma a la
+        # anterior en lugar de sustituirla.
+        if limpiar_historial:
+            await self._bus.reset(self._call_id)
+
         self._inicio = time.perf_counter()
         for speaker in (Speaker.CUSTOMER, Speaker.AGENT):
             self._asr.open(self._call_id, speaker)

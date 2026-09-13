@@ -6,6 +6,7 @@ import type {
   AsrFinalEvent,
   AsrPartialEvent,
   CallEvent,
+  CallStartedEvent,
   EmotionFrameEvent,
   EstadoEmocional,
   Turno,
@@ -30,8 +31,29 @@ export function useCallStream(callId: string | undefined) {
   const wsRef = useRef<WebSocket | null>(null);
   const intentoRef = useRef(0);
   const vivoRef = useRef(true);
+  // Si ya se terminó de recibir el historial. Distingue "reconstruyendo lo que
+  // pasó" de "esto está ocurriendo ahora", que es lo que la insignia comunica.
+  const enVivoRef = useRef(false);
 
   const aplicar = useCallback((ev: CallEvent) => {
+    // Una llamada nueva descarta lo anterior.
+    //
+    // El identificador de llamada de un escenario es determinista, así que un
+    // historial puede contener más de una reproducción. Sin este corte, el
+    // portal pinta las dos y cada turno aparece por duplicado. Anclar en el
+    // último inicio hace que la vista sea correcta aunque el bus arrastre
+    // restos de una ejecución anterior.
+    if (es<CallStartedEvent>(ev, "call.started")) {
+      setTurnos([]);
+      setEmocion(null);
+      // El estado sólo se toca si ya estábamos en vivo: entonces este inicio
+      // es una llamada nueva sobre la misma conexión y hay que salir de
+      // "terminada". Durante la reconstrucción del historial se deja como
+      // está, o la insignia se quedaría en "Conectando…" para siempre.
+      if (enVivoRef.current) setEstado("en_vivo");
+      return;
+    }
+
     if (es<AsrPartialEvent>(ev, "asr.partial") || es<AsrFinalEvent>(ev, "asr.final")) {
       const e: AsrPartialEvent | AsrFinalEvent = ev;
       setTurnos((previos) => {
@@ -90,6 +112,7 @@ export function useCallStream(callId: string | undefined) {
 
       ws.onopen = () => {
         intentoRef.current = 0;
+        enVivoRef.current = false;
         setEstado("conectando");
       };
 
@@ -98,6 +121,7 @@ export function useCallStream(callId: string | undefined) {
         // El servidor manda todo el historial y luego avisa. Hasta entonces la
         // UI está reconstruyendo, no "en vivo".
         if (ev.type === "stream.ready") {
+          enVivoRef.current = true;
           setEstado("en_vivo");
           return;
         }
