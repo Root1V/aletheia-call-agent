@@ -1,0 +1,22 @@
+/** Nombres legibles de los motivos de llamada, compartidos por todas las vistas. */
+export const ETIQUETA_INTENCION: Record<string, string> = {
+  disputa_cargo_no_reconocido: "Cargo no reconocido",
+  disputa_fraude: "Posible fraude",
+  disputa_cobro_duplicado: "Cobro duplicado",
+  disputa_servicio_no_recibido: "Servicio no recibido",
+  reclamo_comision: "Reclamo por comisión",
+  reclamo_tasa_interes: "Reclamo por tasa",
+  seguimiento_reclamo: "Seguimiento de reclamo",
+  seguimiento_reclamo_por_vencer: "Seguimiento de reclamo",
+  consulta_saldo: "Consulta de saldo",
+  consulta_movimiento: "Consulta de movimiento",
+  tarjeta_bloqueada: "Tarjeta bloqueada",
+  tarjeta_rechazada: "Tarjeta rechazada",
+  actualizacion_datos: "Actualización de datos",
+  clave_acceso: "Clave de acceso",
+  consulta_producto: "Consulta de producto",
+  solicitud_credito: "Solicitud de crédito",
+  aumento_linea: "Aumento de línea",
+  cancelacion_producto: "Cancelación de producto",
+  desconocida: "Motivo por determinar",
+};

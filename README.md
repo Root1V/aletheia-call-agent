@@ -49,16 +49,41 @@ por fraude — y esas generan más insatisfacción (29%) que las de fraude real
 Requisitos: Docker, [uv](https://docs.astral.sh/uv/), Node 20+.
 
 ```bash
-make up        # Postgres+pgvector, Redis, MinIO, Keycloak, LiveKit
+make up        # Postgres+pgvector, Redis, MinIO, LiveKit
 make migrate   # esquema
 make seed      # dataset sintético es-PE, reproducible por semilla
+make admin USER=carlos NAME="Carlos Ruiz"   # primer usuario; imprime la contraseña
 make dev       # API en :8000 y portal en :5180
 ```
 
-Abrir <http://localhost:5180>. La bandeja muestra cinco escenarios guionados.
+Abrir <http://localhost:5180> e iniciar sesión. La bandeja muestra cinco
+escenarios guionados.
 
 > Los puertos se configuran en `infra/.env`. Redis sale por el **6380** porque
 > el 6379 suele estar ocupado por otro servicio en la máquina de desarrollo.
+> Keycloak está en el perfil `sso` y no arranca por defecto.
+
+### Acceso
+
+No hay registro público: las altas son una acción administrativa y el primer
+usuario sale de `scripts/create_admin.py`. En una herramienta interna no existe
+caso de uso para el auto-registro, y quitarlo elimina la enumeración de cuentas,
+la confirmación por correo y la recuperación abierta como superficies de ataque.
+
+Tres decisiones de seguridad, las tres con test:
+
+- **Contra un usuario inexistente se verifica igual la contraseña**, contra un
+  hash señuelo. Sin eso la respuesta vuelve en microsegundos frente a los
+  ~200 ms de bcrypt, y esa diferencia basta para enumerar cuentas cronometrando.
+- **Usuario inexistente, contraseña incorrecta y cuenta desactivada devuelven el
+  mismo error.** Distinguirlos convierte el login en un directorio de cuentas.
+- **La API se niega a arrancar** si el entorno no es `dev` y el secreto de firma
+  sigue siendo el de desarrollo. Una advertencia en el log de arranque es
+  justamente lo que nadie lee cuando el despliegue "funcionó".
+
+La autenticación vive detrás de un protocolo con dos implementaciones: `local`
+(JWT propio, la actual) y `oidc` (Keycloak, para cuando el banco integre su SSO).
+El resto de la aplicación depende de `AgentIdentity`, no de cómo se obtuvo.
 
 ---
 
@@ -72,6 +97,7 @@ más rápida de perder la confianza.
 | Fase | Alcance | Estado |
 |---|---|---|
 | 0 | Monorepo, contratos, infraestructura, datos sintéticos | ✅ |
+| — | Autenticación, portal con sidebar, tema claro/oscuro | ✅ |
 | 2 | Contexto de llamada, enriquecimiento, predicción de intención | ✅ |
 | 1 | Transcripción en vivo (LiveKit + ASR en streaming) | pendiente |
 | 3 | Emoción del cliente en tiempo real | pendiente |
@@ -120,15 +146,33 @@ hábiles de la Ley 31763 se cuentan sobre el calendario local.
 
 ---
 
+## Stack
+
+**Backend** — FastAPI · SQL plano con migraciones numeradas · PostgreSQL 17 +
+pgvector · python-jose + passlib[bcrypt] · pydantic-settings · uv.
+
+**Frontend** — React 19 + Vite · TypeScript · Tailwind CSS v4 con el patrón
+shadcn/ui (paleta en variables CSS) · @tanstack/react-query · react-router-dom ·
+axios con interceptors · lucide-react · ESLint 9 flat config.
+
+La paleta está centralizada en `src/index.css`: un solo lugar para el modo
+oscuro y para un rebranding. Cuando llegue el canvas de las barras de emoción,
+leerá esas mismas variables en vez de traer los colores escritos a mano.
+
 ## Estructura
 
 ```
 apps/
-  api/                 FastAPI: contexto de llamada, WS gateway
-  web/                 React + TS: workspace del ejecutivo
+  api/                 FastAPI: autenticación, contexto de llamada, datos del portal
+  web/                 React + TS: portal del ejecutivo
+    src/components/ui/   primitivos (patrón shadcn)
+    src/features/        auth, tema, paneles de la llamada
+    src/pages/           una por ruta
 packages/
   contracts/           esquemas de eventos y dominio (fuente de verdad)
   synthetic-data/      generador y escenarios es-PE
+scripts/
+  create_admin.py      alta de usuarios: el único camino
 infra/
   docker-compose.yml   infraestructura local
   migrations/          esquema en SQL plano, revisable sin ejecutar Python

@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Paleta centralizada en variables CSS (patrón shadcn/ui).
+ *
+ * Un solo lugar para el modo oscuro y para un eventual rebranding. Cualquier
+ * cosa que necesite color —incluido el canvas de las barras de emoción, que no
+ * puede usar clases de Tailwind— lee de aquí en vez de traer el valor escrito
+ * a mano, que es como una paleta termina desincronizada entre DOM y canvas.
+ */
+
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(0.968 0.003 264);
+  --foreground: oklch(0.21 0.017 264);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.017 264);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.017 264);
+
+  /* Indigo-violeta: el acento del sistema. */
+  --primary: oklch(0.556 0.22 278);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-soft: oklch(0.955 0.02 278);
+
+  --secondary: oklch(0.97 0.004 264);
+  --secondary-foreground: oklch(0.3 0.02 264);
+
+  --muted: oklch(0.97 0.004 264);
+  --muted-foreground: oklch(0.54 0.022 264);
+
+  --accent: oklch(0.96 0.015 278);
+  --accent-foreground: oklch(0.42 0.19 278);
+
+  --border: oklch(0.916 0.006 264);
+  --input: oklch(0.916 0.006 264);
+  --ring: oklch(0.556 0.22 278);
+
+  /*
+   * Semáforo. El ámbar está deliberadamente oscurecido respecto al amarillo
+   * "natural": en un panel bancario el estado intermedio es el más frecuente y
+   * el más leído, y un ámbar claro sobre blanco no alcanza contraste AA.
+   */
+  --success: oklch(0.52 0.13 158);
+  --success-soft: oklch(0.955 0.04 158);
+  --warning: oklch(0.53 0.12 75);
+  --warning-soft: oklch(0.96 0.05 85);
+  --danger: oklch(0.545 0.2 25);
+  --danger-soft: oklch(0.96 0.03 25);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.35 0.02 264);
+  --sidebar-border: oklch(0.93 0.005 264);
+
+  color-scheme: light;
+}
+
+.dark {
+  --background: oklch(0.17 0.012 265);
+  --foreground: oklch(0.93 0.008 264);
+
+  --card: oklch(0.212 0.014 265);
+  --card-foreground: oklch(0.93 0.008 264);
+
+  --popover: oklch(0.212 0.014 265);
+  --popover-foreground: oklch(0.93 0.008 264);
+
+  --primary: oklch(0.68 0.17 278);
+  --primary-foreground: oklch(0.16 0.02 265);
+  --primary-soft: oklch(0.28 0.06 278);
+
+  --secondary: oklch(0.26 0.015 265);
+  --secondary-foreground: oklch(0.9 0.01 264);
+
+  --muted: oklch(0.26 0.015 265);
+  --muted-foreground: oklch(0.68 0.017 264);
+
+  --accent: oklch(0.29 0.05 278);
+  --accent-foreground: oklch(0.85 0.09 278);
+
+  --border: oklch(0.29 0.014 265);
+  --input: oklch(0.32 0.016 265);
+  --ring: oklch(0.68 0.17 278);
+
+  --success: oklch(0.76 0.15 160);
+  --success-soft: oklch(0.28 0.06 160);
+  --warning: oklch(0.8 0.13 80);
+  --warning-soft: oklch(0.3 0.05 80);
+  --danger: oklch(0.71 0.16 22);
+  --danger-soft: oklch(0.3 0.07 22);
+
+  --sidebar: oklch(0.195 0.013 265);
+  --sidebar-foreground: oklch(0.82 0.012 264);
+  --sidebar-border: oklch(0.27 0.014 265);
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-sm: calc(var(--radius) - 0.375rem);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Cifras alineadas en columnas. En listas de importes y horas, los dígitos
+     de ancho variable hacen que las cantidades bailen y cueste compararlas. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

@@ -10,7 +10,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml
 PSQL    := docker exec -i cea-postgres psql -U cea -d cea -v ON_ERROR_STOP=1
 
 .DEFAULT_GOAL := help
-.PHONY: help up down logs migrate seed api web dev test lint fmt check clean reset
+.PHONY: help up down logs migrate seed admin api web dev test lint fmt check clean reset
 
 help:  ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -38,6 +38,10 @@ migrate:  ## Aplica las migraciones en orden
 seed:  ## Carga el dataset sintético es-PE (reproducible por semilla)
 	uv run cea-seed --customers 150
 
+admin:  ## Crea el primer usuario del portal. USER=... NAME="..."
+	@test -n "$(USER)" || (echo 'Uso: make admin USER=carlos NAME="Carlos Ruiz"'; exit 1)
+	uv run python scripts/create_admin.py --username "$(USER)" --name "$(NAME)" --generate-password
+
 api:  ## Arranca la API en :8000
 	uv run uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 
@@ -52,7 +56,7 @@ test:  ## Ejecuta la suite completa
 
 lint:  ## Revisa estilo y tipos
 	uv run ruff check .
-	cd apps/web && npx tsc -b --noEmit
+	cd apps/web && npx tsc -b --noEmit && npx eslint .
 
 fmt:  ## Formatea el código Python
 	uv run ruff check --fix .
@@ -64,6 +68,7 @@ reset:  ## Recrea la base desde cero y vuelve a sembrar
 	$(COMPOSE) rm -sf postgres
 	docker volume rm cea_postgres_data || true
 	@$(MAKE) up migrate seed
+	@echo "Recordar crear el usuario:  make admin USER=... NAME=\"...\""
 
 clean:  ## Elimina contenedores y volúmenes. DESTRUCTIVO.
 	$(COMPOSE) down -v
