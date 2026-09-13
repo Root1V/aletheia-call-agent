@@ -23,6 +23,8 @@ from cea_contracts import (
     Speaker,
     TurnEnded,
 )
+from cea_emotion import MotorDeEmocion, SeñalesConversacionales
+from cea_emotion.features import UMBRAL_VOZ_RMS
 
 log = logging.getLogger("cea.worker")
 
@@ -67,6 +69,7 @@ class CallPipeline:
         bus: EventBus,
         ingress: str,
         scenario_id: str | None = None,
+        emocion: MotorDeEmocion | None = None,
     ) -> None:
         self._call_id = call_id
         self._customer_id = customer_id
@@ -81,6 +84,13 @@ class CallPipeline:
         objetivo = int(asr.sample_rate * BLOQUE_MS / 1000)
         self._acum = {s: _Acumulador(objetivo) for s in (Speaker.CUSTOMER, Speaker.AGENT)}
 
+        self._emocion = emocion or MotorDeEmocion(sample_rate=asr.sample_rate)
+        self._conversacional = SeñalesConversacionales()
+        # Para detectar solapamiento hace falta saber si el otro estaba
+        # hablando. Se guarda por hablante y se consulta al llegar el bloque
+        # contrario.
+        self._hablando = {Speaker.CUSTOMER: False, Speaker.AGENT: False}
+
     def _siguiente_seq(self) -> int:
         self._seq += 1
         return self._seq
@@ -89,6 +99,7 @@ class CallPipeline:
         self._inicio = time.perf_counter()
         for speaker in (Speaker.CUSTOMER, Speaker.AGENT):
             self._asr.open(self._call_id, speaker)
+        self._emocion.abrir(self._call_id)
         await self._bus.publish(
             CallStarted(
                 call_id=self._call_id,
@@ -106,10 +117,45 @@ class CallPipeline:
         if bloque is None:
             return
 
+        self._actualizar_solapamiento(frame.speaker, bloque)
+
         for hip in self._asr.accept(self._call_id, frame.speaker, bloque):
             await self._emitir(hip, frame.ts_ms)
 
+        # Sólo el audio del CLIENTE llega al motor de emoción.
+        #
+        # La restricción también vive en el tipo `EmotionFrame`, que fija el
+        # hablante a CUSTOMER, pero conviene que se vea aquí: es el punto donde
+        # alguien podría "aprovechar" el audio del ejecutivo sin darse cuenta
+        # de lo que implica medir emocionalmente a un empleado.
+        if frame.speaker is Speaker.CUSTOMER:
+            fotograma = self._emocion.procesar(
+                self._call_id, bloque, conversacional=self._conversacional
+            )
+            if fotograma is not None:
+                await self._bus.publish(fotograma.model_copy(update={"seq": self._siguiente_seq()}))
+
+    def _actualizar_solapamiento(self, speaker: Speaker, bloque) -> None:
+        """Cuenta las veces que el cliente arranca sobre el ejecutivo.
+
+        Interrumpir es una señal conversacional directa que la prosodia no da:
+        quien interrumpe está tratando de recuperar el control de la
+        conversación. Se cuenta sólo el solapamiento del cliente sobre el
+        ejecutivo; al revés sería medir al empleado.
+        """
+        tiene_voz = bool((bloque**2).mean() ** 0.5 >= UMBRAL_VOZ_RMS)
+        empezaba = not self._hablando[speaker] and tiene_voz
+        self._hablando[speaker] = tiene_voz
+
+        if speaker is not Speaker.CUSTOMER:
+            return
+        if empezaba:
+            self._conversacional.turnos_del_cliente += 1
+            if self._hablando[Speaker.AGENT]:
+                self._conversacional.interrupciones += 1
+
     async def stop(self, reason: str = "normal") -> None:
+        self._emocion.cerrar(self._call_id)
         for speaker in (Speaker.CUSTOMER, Speaker.AGENT):
             for hip in self._asr.close(self._call_id, speaker):
                 await self._emitir(hip, None)

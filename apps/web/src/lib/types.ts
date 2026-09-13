@@ -214,13 +214,35 @@ export interface StreamControlEvent {
   call_id?: string;
 }
 
-export type CallEvent =
+export type EventoConocido =
   | AsrPartialEvent
   | AsrFinalEvent
+  | EmotionFrameEvent
   | CallStartedEvent
   | CallEndedEvent
-  | StreamControlEvent
-  | { type: string; [k: string]: unknown };
+  | StreamControlEvent;
+
+/**
+ * Lo que llega por el WebSocket.
+ *
+ * El comodín existe porque el bus transporta más eventos de los que el portal
+ * consume hoy, y los desconocidos debe ignorarlos sin romperse. Como ese
+ * comodín acepta cualquier `type`, comparar el campo directamente no estrecha
+ * el tipo: para eso está `es()`.
+ */
+export type CallEvent = EventoConocido | { type: string; [k: string]: unknown };
+
+/**
+ * Estrecha un evento del bus a su tipo concreto.
+ *
+ * El servidor valida cada evento contra `packages/contracts` antes de
+ * publicarlo, así que si el `type` coincide la forma está garantizada. El
+ * riesgo real no es un payload malformado sino la deriva entre estos tipos y
+ * los de Pydantic.
+ */
+export function es<T extends EventoConocido>(ev: CallEvent, tipo: T["type"]): ev is T {
+  return ev.type === tipo;
+}
 
 /** Un turno tal como lo pinta la UI. */
 export interface Turno {
@@ -231,4 +253,28 @@ export interface Turno {
   startedAtMs: number;
   /** Orden de llegada: mantiene estable la posición en pantalla. */
   seq: number;
+}
+
+export interface EmotionFrameEvent {
+  type: "emotion.frame";
+  call_id: string;
+  seq: number;
+  ts_ms: number;
+  speaker: "customer";
+  /** Parcial a propósito: sólo las dimensiones que hay evidencia para sostener. */
+  scores: Partial<Record<"frustracion" | "satisfaccion" | "confusion" | "urgencia" | "neutral", number>>;
+  /** null cuando no se ha medido. No es lo mismo que "neutral". */
+  valence: number | null;
+  arousal: number;
+  confidence: number;
+  window_ms: number;
+  contributions: Record<string, number>;
+}
+
+export interface EstadoEmocional {
+  arousal: number;
+  scores: Record<string, number>;
+  confidence: number;
+  contributions: Record<string, number>;
+  tsMs: number;
 }

@@ -116,7 +116,7 @@ más rápida de perder la confianza.
 | — | Autenticación, portal con sidebar, tema claro/oscuro | ✅ |
 | 2 | Contexto de llamada, enriquecimiento, predicción de intención | ✅ |
 | 1 | Transcripción en vivo (ASR en streaming + bus + WebSocket) | ✅ parcial |
-| 3 | Emoción del cliente en tiempo real | pendiente |
+| 3 | Emoción del cliente en tiempo real | ✅ parcial |
 | 4 | RAG y sugerencia generativa con citación obligatoria | pendiente |
 | 5 | Clasificación reclamo/requerimiento (Ley 31763) | pendiente |
 | 6 | Resumen y tipificación post-llamada | pendiente |
@@ -154,6 +154,22 @@ incidente regulatorio.
 monto en el mismo comercio con minutos de diferencia no son indicio de
 duplicado: son un duplicado. Dejar que la suma de tres corazonadas tumbe un
 hecho comprobado es un error de diseño, no de ajuste.
+
+**La emoción se mide sólo donde hay evidencia.** El motor actual usa la señal
+prosódica —energía, tono y ritmo comparados con la línea base del propio
+hablante— más las interrupciones. Eso sostiene **activación**, y de ahí
+frustración y urgencia.
+
+No sostiene **valencia**, **satisfacción** ni **confusión**: la prosodia sola no
+distingue alegría de enfado, porque ambas suenan con energía y tono altos. Esas
+dimensiones se devuelven **ausentes, no en cero** — un cero se lee como
+"neutral", y "no lo sé" no es "neutral". El panel las muestra como pendientes de
+un modelo acústico validado para español, que todavía no hemos elegido: las
+opciones disponibles en abierto son subidas comunitarias sin verificar.
+
+La normalización contra la propia voz del cliente es lo que hace que la señal
+signifique algo. La energía absoluta depende de la ganancia de la línea: sin
+esa referencia, una persona de voz fuerte mediría siempre "muy activada".
 
 **El reconocimiento se mide, no se promete.** `make eval-asr` corre el guion
 completo y reporta WER por hablante, siempre también sobre audio degradado a
@@ -209,6 +225,7 @@ packages/
   eventbus/            bus de la llamada sobre Redis Streams
 services/
   asr/                 reconocimiento en streaming y sus métricas
+  emotion/             estado emocional a partir de prosodia y conversación
 evals/
   scenarios/           guiones reproducibles
   runners/             evaluación de WER y latencia

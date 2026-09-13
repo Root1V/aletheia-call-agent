@@ -14,6 +14,7 @@ members = [
     "apps/api",
     "apps/agent-worker",
     "services/asr",
+    "services/emotion",
 ]
 
 [tool.uv]
@@ -47,6 +48,7 @@ cea-contracts = { workspace = true }
 cea-synthetic = { workspace = true }
 cea-asr = { workspace = true }
 cea-bus = { workspace = true }
+cea-emotion = { workspace = true }
 cea-agent-worker = { workspace = true }
 
 [dependency-groups]

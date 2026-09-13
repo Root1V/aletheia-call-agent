@@ -142,9 +142,24 @@ class EmotionFrame(BaseEvent):
     speaker: Literal[Speaker.CUSTOMER] = Speaker.CUSTOMER
 
     scores: dict[EmotionLabel, float] = Field(
-        description="Probabilidades CALIBRADAS y suavizadas. Una barra al 80% significa 80%."
+        description=(
+            "Probabilidades CALIBRADAS y suavizadas: una barra al 80% significa 80%. "
+            "El diccionario es PARCIAL a propósito — sólo lleva las dimensiones que "
+            "las señales disponibles permiten sostener. Las ausentes se muestran como "
+            "pendientes, no como cero."
+        )
     )
-    valence: float = Field(ge=-1.0, le=1.0)
+    valence: float | None = Field(
+        default=None,
+        ge=-1.0,
+        le=1.0,
+        description=(
+            "None cuando no se ha medido. La prosodia sola no distingue valencia: "
+            "alegría y enfado comparten energía alta, tono alto y ritmo rápido. "
+            "Enviar 0.0 en su lugar haría que la UI mostrara 'neutral' donde en "
+            "realidad no hay dato, que es peor que no mostrar nada."
+        ),
+    )
     arousal: float = Field(ge=-1.0, le=1.0)
     dominance: float | None = Field(default=None, ge=-1.0, le=1.0)
 

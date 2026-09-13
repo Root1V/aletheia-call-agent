@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card } from "@/components/ui/card";
+import { EmotionBars } from "@/features/call/EmotionBars";
 import { Full360 } from "@/features/call/Full360";
 import { LiveTranscript } from "@/features/call/LiveTranscript";
 import { PendingPanel } from "@/features/call/PendingPanel";
@@ -22,7 +23,7 @@ export function CallWorkspacePage() {
   const { callId = "" } = useParams();
   const navigate = useNavigate();
 
-  const { turnos, estado: estadoStream } = useCallStream(callId);
+  const { turnos, emocion, estado: estadoStream } = useCallStream(callId);
 
   const contexto = useQuery({
     queryKey: queryKeys.callContext(callId),
@@ -113,11 +114,7 @@ export function CallWorkspacePage() {
           <div className="space-y-3 2xl:contents">
             <div className="space-y-3">
             <LiveTranscript turnos={turnos} estado={estadoStream} />
-            <PendingPanel titulo="Emoción del cliente" fase="Fase 3">
-              Barras en vivo de frustración, satisfacción, confusión y urgencia, calculadas sólo
-              sobre el audio del cliente. Fusiona señal acústica, textual y conversacional, con
-              calibración y banda de incertidumbre.
-            </PendingPanel>
+            <EmotionBars estado={emocion} />
             </div>
 
             <div className="space-y-3">

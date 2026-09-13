@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { tokenStore } from "@/lib/api/client";
-import type { AsrFinalEvent, AsrPartialEvent, CallEvent, Turno } from "@/lib/types";
+import { es } from "@/lib/types";
+import type {
+  AsrFinalEvent,
+  AsrPartialEvent,
+  CallEvent,
+  EmotionFrameEvent,
+  EstadoEmocional,
+  Turno,
+} from "@/lib/types";
 
 type Estado = "conectando" | "en_vivo" | "terminada" | "sin_conexion";
 
@@ -17,14 +25,15 @@ const RECONEXION_MS = [500, 1000, 2000, 5000, 10000];
  */
 export function useCallStream(callId: string | undefined) {
   const [turnos, setTurnos] = useState<Turno[]>([]);
+  const [emocion, setEmocion] = useState<EstadoEmocional | null>(null);
   const [estado, setEstado] = useState<Estado>("conectando");
   const wsRef = useRef<WebSocket | null>(null);
   const intentoRef = useRef(0);
   const vivoRef = useRef(true);
 
   const aplicar = useCallback((ev: CallEvent) => {
-    if (ev.type === "asr.partial" || ev.type === "asr.final") {
-      const e = ev as AsrPartialEvent | AsrFinalEvent;
+    if (es<AsrPartialEvent>(ev, "asr.partial") || es<AsrFinalEvent>(ev, "asr.final")) {
+      const e: AsrPartialEvent | AsrFinalEvent = ev;
       setTurnos((previos) => {
         const i = previos.findIndex((t) => t.turnId === e.turn_id);
         const turno: Turno = {
@@ -42,6 +51,17 @@ export function useCallStream(callId: string | undefined) {
         const copia = [...previos];
         copia[i] = turno;
         return copia;
+      });
+      return;
+    }
+    if (es<EmotionFrameEvent>(ev, "emotion.frame")) {
+      const e = ev;
+      setEmocion({
+        arousal: e.arousal,
+        scores: e.scores as Record<string, number>,
+        confidence: e.confidence,
+        contributions: e.contributions,
+        tsMs: e.ts_ms,
       });
       return;
     }
@@ -104,8 +124,9 @@ export function useCallStream(callId: string | undefined) {
       window.clearTimeout(temporizador);
       wsRef.current?.close();
       setTurnos([]);
+      setEmocion(null);
     };
   }, [callId, aplicar]);
 
-  return { turnos, estado };
+  return { turnos, emocion, estado };
 }
