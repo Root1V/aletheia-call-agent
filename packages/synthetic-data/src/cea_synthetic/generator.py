@@ -24,6 +24,7 @@ from cea_contracts import (
     CallContext,
     CallIntent,
     Case,
+    CaseType,
     Channel,
     Customer,
     DigitalJourneyEvent,
@@ -94,6 +95,18 @@ class Scenario:
     focus_transaction_id: str | None
     narrative: str = ""
     """Qué está pasando, en una línea, para el guion de la demo."""
+
+    expects_case: bool = True
+    """Si la atención correcta termina abriendo un caso.
+
+    Es False en el cargo mal entendido: la resolución correcta es explicar, no
+    abrir un reclamo. Distinguir ese caso de los demás es justamente lo que el
+    evaluador tiene que medir, porque abrir un reclamo por cada cargo no
+    reconocido satura la operación y dispara los plazos de la Ley 31763.
+    """
+
+    expected_case_type: CaseType | None = None
+    """Clasificación correcta cuando sí corresponde abrir caso."""
 
     def to_call_context(self, call_id: str, now: datetime) -> CallContext:
         """Arma el pre-pop: todo lo que el workspace necesita para pintarse."""

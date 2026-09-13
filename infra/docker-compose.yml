@@ -1,0 +1,111 @@
+# Infraestructura local del copiloto.
+#
+#   docker compose -f infra/docker-compose.yml up -d
+#
+# Todo es open source y auto-hospedable: no hay ningún servicio gestionado en
+# el camino crítico. Las credenciales de este archivo son de DESARROLLO y no
+# deben reutilizarse en ningún entorno compartido.
+#
+# Los puertos se publican por variable de entorno (ver infra/.env) porque esta
+# máquina ya corre otros servicios: el Redis de la plataforma Prometheus ocupa
+# el 6379, así que el nuestro sale por el 6380 y no se pisan.
+
+name: cea
+
+services:
+  postgres:
+    # pgvector sobre Postgres 17: una sola base para lo transaccional, la
+    # búsqueda léxica y la vectorial.
+    image: pgvector/pgvector:pg17
+    container_name: cea-postgres
+    environment:
+      POSTGRES_USER: cea
+      POSTGRES_PASSWORD: cea_dev
+      POSTGRES_DB: cea
+      # Ordenamiento español vía ICU, no vía locale del sistema operativo: la
+      # imagen no trae es_PE.utf8 e initdb falla. Con ICU, "Ñ" ordena entre N y
+      # O y las tildes no mandan a los apellidos al final de la lista, que es lo
+      # que se ve en cualquier pantalla de clientes de un banco peruano.
+      #
+      # Se fija al crear el cluster: cambiarlo después obliga a recrear la base.
+      POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=es-PE --encoding=UTF8 --locale=C.UTF-8"
+    ports:
+      - "${CEA_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cea -d cea"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    # Bus de eventos (Redis Streams), caché semántica y estado de sesión.
+    # A escala se migra a NATS JetStream o Redpanda por durabilidad y
+    # particionado; para el MVP añadir un broker aparte sería peso muerto.
+    image: redis:7-alpine
+    container_name: cea-redis
+    command: redis-server --appendonly yes --appendfsync everysec
+    ports:
+      - "${CEA_REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    # Audio de llamadas y artefactos de evaluación.
+    image: minio/minio:latest
+    container_name: cea-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: cea
+      MINIO_ROOT_PASSWORD: cea_dev_minio
+    ports:
+      - "${CEA_MINIO_PORT:-9000}:9000"
+      - "${CEA_MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  keycloak:
+    # Autenticación del portal (OIDC) con roles ejecutivo/supervisor/admin.
+    # Es el estándar que el área de seguridad de un banco ya sabe auditar.
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: cea-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8089
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "${CEA_KEYCLOAK_PORT:-8089}:8089"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+
+  livekit:
+    # SFU de WebRTC. Da separación de hablantes por track —exacta y gratuita,
+    # sin diarización— y trae SIP nativo para cuando entre la telefonía real.
+    image: livekit/livekit-server:latest
+    container_name: cea-livekit
+    command: --config /etc/livekit.yaml
+    ports:
+      - "${CEA_LIVEKIT_PORT:-7880}:7880"
+      - "${CEA_LIVEKIT_TCP_PORT:-7881}:7881"
+      - "50000-50019:50000-50019/udp"
+    volumes:
+      - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

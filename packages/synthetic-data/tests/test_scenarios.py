@@ -7,7 +7,6 @@ resista preguntas, y la aritmética regulatoria, que tiene consecuencia legal.
 from datetime import UTC, datetime, timedelta
 
 import pytest
-
 from cea_contracts import CallIntent, CaseType, TransactionStatus
 from cea_synthetic.generator import PeruBankGenerator, _habiles_despues
 from cea_synthetic.scenarios import build_all
@@ -62,7 +61,9 @@ def test_cargo_no_reconocido_es_explicable_sin_abrir_caso() -> None:
     nada, y la disputa tendría que escalar igual.
     """
     escenario = next(s for s in build_all() if s.scenario_id == "disputa_cargo_no_reconocido")
-    foco = next(t for t in escenario.transactions if t.transaction_id == escenario.focus_transaction_id)
+    foco = next(
+        t for t in escenario.transactions if t.transaction_id == escenario.focus_transaction_id
+    )
 
     assert foco.prior_purchases_90d >= 3, "sin historial no hay explicación posible"
     assert foco.device_label, "el dispositivo propio del cliente es parte de la prueba"
@@ -73,7 +74,9 @@ def test_cargo_no_reconocido_es_explicable_sin_abrir_caso() -> None:
 def test_fraude_no_tiene_historial_ni_dispositivo_conocido() -> None:
     """El contraste con el caso anterior es lo que justifica el flujo completo."""
     escenario = next(s for s in build_all() if s.scenario_id == "disputa_fraude")
-    foco = next(t for t in escenario.transactions if t.transaction_id == escenario.focus_transaction_id)
+    foco = next(
+        t for t in escenario.transactions if t.transaction_id == escenario.focus_transaction_id
+    )
 
     assert foco.prior_purchases_90d == 0
     assert foco.device_label is None

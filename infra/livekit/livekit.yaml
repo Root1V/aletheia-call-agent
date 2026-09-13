@@ -1,0 +1,26 @@
+# Configuración de LiveKit para desarrollo local.
+#
+# Claves de DESARROLLO: no tienen valor fuera de esta máquina y no deben
+# reutilizarse en ningún entorno compartido.
+port: 7880
+
+rtc:
+  tcp_port: 7881
+  # Docker Desktop en macOS no publica rangos UDP grandes sin degradar el
+  # arranque, así que el rango se mantiene estrecho y se deja TCP como
+  # respaldo. En servidor se usa host networking con el rango completo.
+  port_range_start: 50000
+  port_range_end: 50019
+  use_external_ip: false
+
+keys:
+  devkey: devsecret_solo_para_desarrollo_local_32chars
+
+logging:
+  level: info
+  json: false
+
+room:
+  auto_create: true
+  empty_timeout: 300
+  max_participants: 8

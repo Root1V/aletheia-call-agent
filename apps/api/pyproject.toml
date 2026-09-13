@@ -10,6 +10,8 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "redis>=5.2",
+    "psycopg[binary,pool]>=3.2",
+    "pyjwt[crypto]>=2.9",
     "pydantic-settings>=2.6",
     "python-multipart>=0.0.12",
 ]

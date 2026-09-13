@@ -149,6 +149,8 @@ def disputa_cargo_no_reconocido(gen: PeruBankGenerator, idx: int = 1) -> Scenari
 
     return Scenario(
         scenario_id="disputa_cargo_no_reconocido",
+        expects_case=False,
+        expected_case_type=None,
         intent=CallIntent.DISPUTA_CARGO_NO_RECONOCIDO,
         customer=cliente,
         transactions=tuple(historial),
@@ -220,6 +222,8 @@ def disputa_fraude(gen: PeruBankGenerator, idx: int = 2) -> Scenario:
 
     return Scenario(
         scenario_id="disputa_fraude",
+        expects_case=True,
+        expected_case_type=CaseType.RECLAMO,
         intent=CallIntent.DISPUTA_FRAUDE,
         customer=cliente,
         transactions=tuple(historial),
@@ -270,6 +274,8 @@ def disputa_cobro_duplicado(gen: PeruBankGenerator, idx: int = 3) -> Scenario:
 
     return Scenario(
         scenario_id="disputa_cobro_duplicado",
+        expects_case=True,
+        expected_case_type=CaseType.RECLAMO,
         intent=CallIntent.DISPUTA_COBRO_DUPLICADO,
         customer=cliente,
         transactions=tuple(historial),
@@ -342,6 +348,8 @@ def tarjeta_rechazada(gen: PeruBankGenerator, idx: int = 4) -> Scenario:
 
     return Scenario(
         scenario_id="tarjeta_rechazada",
+        expects_case=False,
+        expected_case_type=None,
         intent=CallIntent.TARJETA_RECHAZADA,
         customer=cliente,
         transactions=tuple(historial),
@@ -418,6 +426,8 @@ def seguimiento_reclamo_por_vencer(gen: PeruBankGenerator, idx: int = 5) -> Scen
 
     return Scenario(
         scenario_id="seguimiento_reclamo_por_vencer",
+        expects_case=True,
+        expected_case_type=CaseType.REQUERIMIENTO,
         intent=CallIntent.SEGUIMIENTO_RECLAMO,
         customer=cliente,
         transactions=tuple(historial),

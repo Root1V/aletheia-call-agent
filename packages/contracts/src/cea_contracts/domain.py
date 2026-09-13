@@ -276,4 +276,20 @@ class CallContext(_Base):
         default=(),
         description="Transacciones seleccionadas por la intención predicha, ya enriquecidas.",
     )
+    focus_transaction_id: str | None = Field(
+        default=None,
+        description=(
+            "La transacción que se está discutiendo. Sin esto el workspace no sabe "
+            "qué resaltar y el ejecutivo tiene que buscarla a ojo en la lista, que es "
+            "exactamente el trabajo manual que el producto existe para eliminar."
+        ),
+    )
+    supporting_transaction_ids: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "Compras previas en el MISMO comercio. Son la prueba que convierte "
+            "'no reconozco este cargo' en 'ya compró ahí seis veces'; sin ellas el "
+            "copiloto no puede afirmar nada y la disputa escala igual."
+        ),
+    )
     generated_at: datetime
