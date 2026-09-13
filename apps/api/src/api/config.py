@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     # como bug.
     budget_transcript_ms: int = 700
     budget_suggestion_ms: int = 1500
+    # Armado del contexto previo a descolgar. Holgado respecto a lo que cuesta
+    # hoy (3-9 ms) porque tiene que seguir cumpliéndose cuando se le sumen el
+    # enriquecimiento y la búsqueda en la base de conocimiento.
+    budget_context_ms: int = 150
 
     def validar_para_arranque(self) -> list[str]:
         """Problemas de configuración que deben impedir el arranque.

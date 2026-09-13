@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from ..auth import CurrentAgent
+from ..config import get_settings
 from ..db import cursor
 from ..services import context_builder
 
@@ -34,11 +35,14 @@ class InboundCall(BaseModel):
 class ContextResponse(BaseModel):
     context: CallContext
     build_ms: float
-    """Cuánto tardó armar el pre-pop.
+    """Cuánto tardó armar el contexto previo a descolgar."""
 
-    Se devuelve en la respuesta, y no sólo en las métricas, para que quede a la
-    vista durante la demo: el presupuesto de latencia es el requisito no
-    funcional número uno y tiene que ser observable sin abrir Grafana.
+    budget_ms: int
+    """Umbral contra el que juzgar `build_ms`.
+
+    Viaja en la misma respuesta que la medición para que el portal no tenga que
+    consultarlo aparte ni, peor, llevar su propia copia del número: dos sitios
+    con el mismo umbral acaban discrepando.
     """
 
 
@@ -93,7 +97,11 @@ async def call_context(call_id: str, agent: CurrentAgent) -> ContextResponse:
     contexto = await context_builder.build(call_id, fila["customer_id"])
     transcurrido = (time.perf_counter() - inicio) * 1000
 
-    return ContextResponse(context=contexto, build_ms=round(transcurrido, 1))
+    return ContextResponse(
+        context=contexto,
+        build_ms=round(transcurrido, 1),
+        budget_ms=get_settings().budget_context_ms,
+    )
 
 
 class AnswerRequest(BaseModel):

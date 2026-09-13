@@ -4,10 +4,10 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { Cargando, ErrorDeCarga } from "@/components/StateMessage";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card } from "@/components/ui/card";
+import { ContextTiming } from "@/features/call/ContextTiming";
 import { EmotionBars } from "@/features/call/EmotionBars";
 import { Full360 } from "@/features/call/Full360";
 import { LiveTranscript } from "@/features/call/LiveTranscript";
@@ -58,7 +58,7 @@ export function CallWorkspacePage() {
     );
   }
 
-  const { context: c, build_ms } = contexto.data;
+  const { context: c, build_ms, budget_ms } = contexto.data;
 
   return (
     <AppShell
@@ -66,16 +66,7 @@ export function CallWorkspacePage() {
       subtitulo={c.call_id.replace("call-", "").replaceAll("_", " ")}
       acciones={
         <div className="flex items-center gap-2">
-          {/* El tiempo de armado del pre-pop, a la vista y no sólo en las
-              métricas: el presupuesto de latencia es el requisito no funcional
-              número uno y debe poder comprobarse sin abrir Grafana. */}
-          <Badge
-            variant="muted"
-            className="tabular font-mono"
-            title="Tiempo de armado del contexto previo a descolgar"
-          >
-            pre-pop {build_ms} ms
-          </Badge>
+          <ContextTiming buildMs={build_ms} budgetMs={budget_ms} />
           <Button variant="outline" size="sm" onClick={() => navigate("/bandeja")}>
             <PhoneOff />
             Colgar

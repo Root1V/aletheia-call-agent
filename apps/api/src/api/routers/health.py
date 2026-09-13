@@ -36,5 +36,6 @@ async def health(settings: Annotated[Settings, Depends(get_settings)]) -> dict:
         "presupuesto_latencia_ms": {
             "transcripcion_visible": settings.budget_transcript_ms,
             "sugerencia_visible": settings.budget_suggestion_ms,
+            "contexto_previo": settings.budget_context_ms,
         },
     }

@@ -149,7 +149,10 @@ export interface CallContext {
 
 export interface ContextResponse {
   context: CallContext;
+  /** Cuánto tardó el servidor en armar el contexto previo a descolgar. */
   build_ms: number;
+  /** Umbral contra el que juzgarlo. Viaja con la medición para que no haya dos copias. */
+  budget_ms: number;
 }
 
 export interface InboundCall {

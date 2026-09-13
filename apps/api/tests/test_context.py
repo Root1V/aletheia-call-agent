@@ -12,6 +12,7 @@ import time
 
 import psycopg
 import pytest
+from api.config import Settings
 from api.services import context_builder
 from cea_contracts import CallIntent, TransactionStatus
 
@@ -30,10 +31,11 @@ pytestmark = pytest.mark.skipif(
     not _hay_datos(), reason="Sin base sembrada. Levantar infra y correr `make seed`."
 )
 
-# El pre-pop corre antes de descolgar y no compite con el presupuesto de la
-# transcripción (700 ms), pero un margen amplio es lo que permite añadir
-# después el enriquecimiento y el RAG sin rehacer la arquitectura.
-PRESUPUESTO_PREPOP_MS = 150
+# El umbral sale de la configuración, no de una constante aquí.
+#
+# Duplicarlo garantiza que un día alguien suba el presupuesto en producción y
+# el test siga midiendo contra el valor viejo, o al revés.
+PRESUPUESTO_PREPOP_MS = Settings().budget_context_ms
 
 
 async def test_predice_el_motivo_de_las_cinco_llamadas(escenarios) -> None:
@@ -183,3 +185,15 @@ async def test_el_riesgo_mostrado_coincide_con_lo_que_el_banco_detecto(escenario
 
     assert alto.trust.fraud_risk_score >= 0.5
     assert bajo.trust.fraud_risk_score < 0.5
+
+
+def test_el_presupuesto_del_contexto_sale_de_la_configuracion() -> None:
+    """Un solo número, no tres copias.
+
+    El umbral lo consultan el panel de Grafana, las pruebas de carga, este test
+    y el portal. Cuando cada uno lleva su propia constante, subirlo en
+    producción deja a los demás midiendo contra el valor viejo sin que nada
+    falle.
+    """
+    assert Settings().budget_context_ms == PRESUPUESTO_PREPOP_MS
+    assert Settings(budget_context_ms=42).budget_context_ms == 42

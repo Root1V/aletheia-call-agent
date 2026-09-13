@@ -24,6 +24,7 @@ export interface Health {
   presupuesto_latencia_ms: {
     transcripcion_visible: number;
     sugerencia_visible: number;
+    contexto_previo: number;
   };
 }
 
