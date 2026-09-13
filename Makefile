@@ -10,7 +10,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml
 PSQL    := docker exec -i cea-postgres psql -U cea -d cea -v ON_ERROR_STOP=1
 
 .DEFAULT_GOAL := help
-.PHONY: help up down logs migrate seed admin api web dev test lint fmt check clean reset
+.PHONY: help up down logs migrate seed admin models audio eval-asr api web dev test lint fmt check clean reset
 
 help:  ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -41,6 +41,15 @@ seed:  ## Carga el dataset sintético es-PE (reproducible por semilla)
 admin:  ## Crea el primer usuario del portal. USER=... NAME="..."
 	@test -n "$(USER)" || (echo 'Uso: make admin USER=carlos NAME="Carlos Ruiz"'; exit 1)
 	uv run python scripts/create_admin.py --username "$(USER)" --name "$(NAME)" --generate-password
+
+models:  ## Descarga los modelos de voz a models/ (muestra sus licencias)
+	uv run python scripts/fetch_models.py
+
+audio:  ## Renderiza los guiones de evals/scenarios a audio (requiere macOS)
+	uv run python scripts/make_audio.py
+
+eval-asr:  ## Evalúa el reconocimiento sobre los guiones, limpio y con telefonía
+	uv run python evals/runners/asr_eval.py --detalle
 
 api:  ## Arranca la API en :8000
 	uv run uvicorn api.main:app --reload --host 127.0.0.1 --port 8000

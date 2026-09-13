@@ -1,0 +1,81 @@
+# Guion reproducible del caso insignia.
+#
+# El cliente SÍ hizo la compra, pero el descriptor de su estado de cuenta es
+# ilegible. La atención correcta explica y NO abre reclamo: es el 61% de las
+# disputas, y abrir un caso por cada una satura la operación y dispara los
+# plazos de la Ley 31763 sin motivo.
+#
+# El texto es el que se usa como referencia para calcular el WER, así que se
+# escribe tal como se pronuncia: los importes en palabras, porque el
+# reconocedor devuelve "ciento ochenta y nueve" y no "189".
+
+scenario_id: disputa_cargo_no_reconocido
+descripcion: Cargo no reconocido que resulta ser una compra propia del cliente
+resultado_esperado:
+  abre_caso: false
+  motivo: >-
+    Hay seis compras previas en el mismo comercio desde el propio dispositivo
+    del cliente. Se resuelve explicando.
+
+voces:
+  customer: Paulina   # es_MX
+  agent: Mónica       # es_ES
+
+turnos:
+  - speaker: agent
+    texto: >-
+      Buenos días, le saluda Carlos del banco. ¿Con quién tengo el gusto?
+
+  - speaker: customer
+    pausa_antes_ms: 300
+    texto: >-
+      Buenos días. Mire, le llamo porque tengo un cargo que no reconozco.
+
+  - speaker: agent
+    pausa_antes_ms: 400
+    texto: >-
+      Claro que sí, con gusto lo revisamos. ¿Me indica el monto y la fecha?
+
+  - speaker: customer
+    pausa_antes_ms: 350
+    texto: >-
+      Son ciento ochenta y nueve soles con noventa, del diez de setiembre.
+      En el estado de cuenta dice sunrise tech y yo nunca he comprado ahí.
+      Ya intenté reportarlo tres veces por la aplicación y no me deja.
+
+  - speaker: agent
+    pausa_antes_ms: 500
+    texto: >-
+      Entiendo su molestia, y lamento que la aplicación no se lo haya
+      permitido. Ya tengo el consumo a la vista. Ese cargo corresponde a
+      inDrive, la aplicación de viajes. El comercio aparece con otro nombre
+      porque así lo registra su procesador de pagos.
+
+  - speaker: customer
+    pausa_antes_ms: 450
+    texto: >-
+      ¿inDrive? Pero yo no recuerdo haber pedido un viaje tan caro.
+
+  - speaker: agent
+    pausa_antes_ms: 400
+    texto: >-
+      Le doy el detalle. El consumo fue el diez de setiembre a las tres y
+      media de la tarde, desde su propio teléfono. Y veo que usted ha usado
+      inDrive seis veces en los últimos noventa días, siempre desde ese mismo
+      equipo.
+
+  - speaker: customer
+    pausa_antes_ms: 600
+    texto: >-
+      Ah, ya caigo. Ese día fui al aeropuerto, por eso salió más caro.
+      Qué pena, disculpe la molestia.
+
+  - speaker: agent
+    pausa_antes_ms: 400
+    texto: >-
+      No se preocupe, para eso estamos. ¿Le ayudo con algo más?
+
+  - speaker: customer
+    pausa_antes_ms: 300
+    texto: >-
+      No, eso era todo. Muchas gracias.

@@ -11,11 +11,39 @@ members = [
     "packages/contracts",
     "packages/synthetic-data",
     "apps/api",
+    "services/asr",
+]
+
+[tool.uv]
+# Nunca construir sherpa-onnx desde su sdist.
+#
+# La librería nativa (libonnxruntime.dylib) viaja en el paquete separado
+# `sherpa-onnx-core`, y esa dependencia sólo aparece en los metadatos del
+# WHEEL. Como `sherpa-onnx-core` no publica sdist, la resolución universal de
+# uv —que contempla todas las plataformas— retrocede al sdist del padre, lo
+# construye sin el core, y el resultado importa pero revienta al cargar la
+# librería nativa. Prohibirlo convierte ese fallo silencioso en un error de
+# instalación claro.
+no-build-package = ["sherpa-onnx"]
+
+# Plataformas para las que se resuelve el lockfile.
+#
+# Por defecto uv resuelve para TODAS las plataformas imaginables, y si una
+# dependencia nativa no tiene rueda para alguna de ellas, retrocede al sdist
+# del padre para todo el mundo. Declarar el universo real —Apple Silicon en
+# desarrollo, Linux en servidor— permite usar las ruedas nativas. Añadir una
+# plataforma nueva aquí es una decisión consciente, no un descubrimiento en
+# mitad de un despliegue.
+environments = [
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'aarch64'",
 ]
 
 [tool.uv.sources]
 cea-contracts = { workspace = true }
 cea-synthetic = { workspace = true }
+cea-asr = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -33,5 +61,8 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["packages", "apps", "evals"]
+# Sin esto, apps/api/tests y services/asr/tests colisionan: ambos se
+# resolverían como el módulo "tests" y pytest aborta la recolección.
+addopts = "--import-mode=importlib"
+testpaths = ["packages", "apps", "services", "evals"]
 filterwarnings = ["ignore::DeprecationWarning"]

@@ -7,8 +7,10 @@ login en un oráculo para enumerar cuentas sin que nada falle visiblemente.
 
 from __future__ import annotations
 
+import os
 import time
 
+import psycopg
 import pytest
 from api.auth.base import AgentIdentity
 from api.auth.local import LocalAuthProvider, hash_password
@@ -16,9 +18,20 @@ from api.config import SECRETO_DE_DESARROLLO, Settings
 from api.db import cursor
 from fastapi import HTTPException
 
-from .conftest import requiere_datos
 
-pytestmark = requiere_datos
+def _hay_datos() -> bool:
+    try:
+        with psycopg.connect(DSN, connect_timeout=2) as conn, conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM demo_scenarios")
+            return (cur.fetchone() or (0,))[0] > 0
+    except Exception:
+        return False
+
+
+DSN = os.environ.get("CEA_DATABASE_URL", "postgresql://cea:cea_dev@localhost:5432/cea")
+pytestmark = pytest.mark.skipif(
+    not _hay_datos(), reason="Sin base sembrada. Levantar infra y correr `make seed`."
+)
 
 SECRETO = "secreto-de-pruebas-suficientemente-largo-para-hs256"
 

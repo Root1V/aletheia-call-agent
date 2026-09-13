@@ -27,3 +27,5 @@ infra/volumes/
 
 # SO
 .DS_Store
+models/
+evals/audio/

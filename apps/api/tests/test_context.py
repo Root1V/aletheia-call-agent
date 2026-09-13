@@ -7,14 +7,28 @@ correcta.
 
 from __future__ import annotations
 
+import os
 import time
 
+import psycopg
+import pytest
 from api.services import context_builder
 from cea_contracts import CallIntent, TransactionStatus
 
-from .conftest import requiere_datos
 
-pytestmark = requiere_datos
+def _hay_datos() -> bool:
+    try:
+        with psycopg.connect(DSN, connect_timeout=2) as conn, conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM demo_scenarios")
+            return (cur.fetchone() or (0,))[0] > 0
+    except Exception:
+        return False
+
+
+DSN = os.environ.get("CEA_DATABASE_URL", "postgresql://cea:cea_dev@localhost:5432/cea")
+pytestmark = pytest.mark.skipif(
+    not _hay_datos(), reason="Sin base sembrada. Levantar infra y correr `make seed`."
+)
 
 # El pre-pop corre antes de descolgar y no compite con el presupuesto de la
 # transcripción (700 ms), pero un margen amplio es lo que permite añadir
