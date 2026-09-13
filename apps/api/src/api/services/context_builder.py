@@ -84,15 +84,16 @@ async def build(call_id: str, customer_id: str) -> CallContext:
         transacciones: tuple[Transaction, ...] = ()
         foco_id: str | None = None
         soporte: tuple[str, ...] = ()
+        intentos: tuple[str, ...] = ()
         if prediccion.intent in _MOTIVOS_CON_TRANSACCIONES:
-            transacciones, foco_id, soporte = await _relevant_transactions(
+            transacciones, foco_id, soporte, intentos = await _relevant_transactions(
                 cur, customer_id, eventos, casos
             )
 
     return CallContext(
         call_id=call_id,
         customer=customer,
-        trust=_trust(customer),
+        trust=_trust(customer, eventos),
         intent=prediccion,
         recent_account_events=tuple(_to_account_event(e) for e in eventos),
         digital_journey=tuple(_to_journey_event(j) for j in journey),
@@ -100,6 +101,7 @@ async def build(call_id: str, customer_id: str) -> CallContext:
         relevant_transactions=transacciones,
         focus_transaction_id=foco_id,
         supporting_transaction_ids=soporte,
+        related_attempt_ids=intentos,
         generated_at=ahora,
     )
 
@@ -274,7 +276,7 @@ def _elegir_foco(filas: list[dict], candidatos: list[str]) -> str | None:
 
 async def _relevant_transactions(
     cur, customer_id: str, eventos: list[dict], casos: list[dict]
-) -> tuple[tuple[Transaction, ...], str | None, tuple[str, ...]]:
+) -> tuple[tuple[Transaction, ...], str | None, tuple[str, ...], tuple[str, ...]]:
     """Transacciones que hacen falta para resolver el motivo detectado.
 
     Trae la transacción señalada por el evento o el caso, y a su alrededor el
@@ -359,17 +361,32 @@ async def _relevant_transactions(
             )
         )
 
-    # Las compras previas en el mismo comercio son la prueba: se marcan aparte
-    # para que la UI pueda mostrarlas como respaldo de la explicación en vez de
-    # mezclarlas con el resto del extracto.
-    soporte = tuple(
-        r["transaction_id"]
-        for r in filas
-        if merchant_del_foco
-        and r["merchant_id"] == merchant_del_foco
-        and r["transaction_id"] != foco_id
-    )
-    return tuple(salida), foco_id, soporte
+    # Las transacciones del mismo comercio se parten en dos grupos que
+    # significan cosas OPUESTAS, y confundirlos invierte la conclusión:
+    #
+    # - Compras ANTERIORES y liquidadas: prueba de que el cliente es cliente
+    #   habitual del comercio. Sostienen la explicación.
+    # - Intentos POSTERIORES, típicamente rechazados: prueba de lo contrario.
+    #   Un cliente que compra no reintenta el mismo monto tras un rechazo; un
+    #   defraudador probando una tarjeta, sí.
+    #
+    # Contarlos juntos hacía que el panel anunciara "2 compras previas en
+    # AliExpress" justo encima del aviso de que no había ninguna.
+    fila_foco = next((r for r in filas if r["transaction_id"] == foco_id), None)
+    momento_foco = fila_foco["occurred_at"] if fila_foco else None
+
+    soporte: list[str] = []
+    intentos: list[str] = []
+    if merchant_del_foco and momento_foco is not None:
+        for r in filas:
+            if r["merchant_id"] != merchant_del_foco or r["transaction_id"] == foco_id:
+                continue
+            if r["occurred_at"] < momento_foco and r["status"] == "liquidada":
+                soporte.append(r["transaction_id"])
+            elif r["occurred_at"] >= momento_foco:
+                intentos.append(r["transaction_id"])
+
+    return tuple(salida), foco_id, tuple(soporte), tuple(intentos)
 
 
 # ── conversiones ─────────────────────────────────────────────────────────────
@@ -411,7 +428,24 @@ def _to_case(r: dict) -> Case:
     )
 
 
-def _trust(customer: Customer) -> TrustState:
+def _riesgo_fraude(eventos: list[dict]) -> float:
+    """Riesgo derivado de la severidad que asignó el monitoreo del banco.
+
+    SIMULADO en el MVP, como todo el estado de verificación. Lo que no es
+    simulado es la coherencia: el indicador tiene que reflejar la misma
+    evidencia que el resto del panel.
+    """
+    severidades = {e["severity"] for e in eventos}
+    if "critico" in severidades:
+        return 0.88
+    if "alto" in severidades:
+        return 0.71
+    if "medio" in severidades:
+        return 0.34
+    return 0.08
+
+
+def _trust(customer: Customer, eventos: list[dict]) -> TrustState:
     """Estado de verificación.
 
     SIMULADO en el MVP, y conviene decirlo sin ambigüedad. Lo que sí es real
@@ -428,7 +462,11 @@ def _trust(customer: Customer) -> TrustState:
                 kind="pregunta_seguridad", passed=True, detail="Último dígito del documento"
             ),
         ),
-        fraud_risk_score=0.08,
+        # El riesgo se deriva de lo que el monitoreo del propio banco ya marcó.
+        # Una barra que anuncia "riesgo de fraude bajo" sobre un caso que el
+        # banco clasificó como severidad alta no es sólo incoherente: le enseña
+        # al ejecutivo a no mirar el indicador.
+        fraud_risk_score=_riesgo_fraude(eventos),
         synthetic_voice_score=0.03,
         step_up_required_for=("transferencia", "aumento_linea", "cambio_datos_contacto"),
     )

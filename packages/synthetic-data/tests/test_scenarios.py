@@ -120,3 +120,20 @@ def test_intencion_pertenece_a_la_taxonomia() -> None:
     """Una taxonomía corta y cerrada es lo que se etiqueta de forma fiable."""
     for escenario in build_all():
         assert isinstance(escenario.intent, CallIntent)
+
+
+def test_los_reintentos_del_fraude_no_se_contradicen_entre_si() -> None:
+    """Un motivo de rechazo al azar por transacción produce imposibles.
+
+    Si el cargo se aprobó a las 11:30, un reintento a las 11:33 no puede ser
+    rechazado por "tarjeta vencida" ni por "fondos insuficientes": esos motivos
+    contradicen la aprobación anterior. Cualquiera del banco lo detecta en el
+    primer vistazo, y eso resta credibilidad a todo lo demás del panel.
+    """
+    escenario = next(s for s in build_all() if s.scenario_id == "disputa_fraude")
+    rechazos = [t for t in escenario.transactions if t.status is TransactionStatus.RECHAZADA]
+
+    assert len(rechazos) >= 2
+    motivos = {t.decline_reason for t in rechazos}
+    assert len(motivos) == 1, f"motivos contradictorios entre reintentos: {motivos}"
+    assert "prevención" in next(iter(motivos))

@@ -121,3 +121,52 @@ async def test_ningun_documento_completo_sale_del_backend(escenarios) -> None:
         assert ctx.customer.document_masked.startswith("***")
         for h in ctx.customer.holdings:
             assert h.masked_number is None or h.masked_number.startswith("****")
+
+
+async def test_los_intentos_del_fraude_no_se_cuentan_como_compras_previas(escenarios) -> None:
+    """Dos grupos con significado OPUESTO, y confundirlos invierte la conclusión.
+
+    Los reintentos rechazados del defraudador son posteriores al cargo, no
+    anteriores. Contarlos como historial hacía que el panel anunciara "2
+    compras previas en AliExpress" justo encima del aviso de que no había
+    ninguna.
+    """
+    sc = next(s for s in escenarios if s["scenario_id"] == "disputa_fraude")
+    ctx = await context_builder.build("call-disputa_fraude", sc["customer_id"])
+
+    assert ctx.supporting_transaction_ids == (), "un fraude no tiene historial con el comercio"
+    assert len(ctx.related_attempt_ids) >= 2, "los reintentos son la evidencia del fraude"
+
+    foco = next(
+        t for t in ctx.relevant_transactions if t.transaction_id == ctx.focus_transaction_id
+    )
+    intentos = [t for t in ctx.relevant_transactions if t.transaction_id in ctx.related_attempt_ids]
+    assert all(t.occurred_at >= foco.occurred_at for t in intentos)
+
+
+async def test_las_compras_previas_son_anteriores_y_liquidadas(escenarios) -> None:
+    sc = next(s for s in escenarios if s["scenario_id"] == "disputa_cargo_no_reconocido")
+    ctx = await context_builder.build("call-disputa_cargo_no_reconocido", sc["customer_id"])
+
+    foco = next(
+        t for t in ctx.relevant_transactions if t.transaction_id == ctx.focus_transaction_id
+    )
+    apoyos = [
+        t for t in ctx.relevant_transactions if t.transaction_id in ctx.supporting_transaction_ids
+    ]
+    assert apoyos
+    assert all(t.occurred_at < foco.occurred_at for t in apoyos)
+    assert all(t.status is TransactionStatus.LIQUIDADA for t in apoyos)
+    assert ctx.related_attempt_ids == ()
+
+
+async def test_el_riesgo_mostrado_coincide_con_lo_que_el_banco_detecto(escenarios) -> None:
+    """Un indicador que contradice al resto del panel enseña a no mirarlo."""
+    fraude = next(s for s in escenarios if s["scenario_id"] == "disputa_fraude")
+    normal = next(s for s in escenarios if s["scenario_id"] == "disputa_cargo_no_reconocido")
+
+    alto = await context_builder.build("call-disputa_fraude", fraude["customer_id"])
+    bajo = await context_builder.build("call-x", normal["customer_id"])
+
+    assert alto.trust.fraud_risk_score >= 0.5
+    assert bajo.trust.fraud_risk_score < 0.5

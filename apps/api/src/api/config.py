@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     oidc_issuer: str = "http://localhost:8089/realms/cea"
     oidc_audience: str = "cea-web"
 
-    cors_origins: tuple[str, ...] = ("http://localhost:5173", "http://127.0.0.1:5173")
+    cors_origins: tuple[str, ...] = ("http://localhost:5180", "http://127.0.0.1:5180")
 
     # Presupuesto de latencia. No es decorativo: la API lo expone en /health
     # para que el panel de Grafana y los tests de carga comparen contra el

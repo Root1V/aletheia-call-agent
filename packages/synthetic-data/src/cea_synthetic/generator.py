@@ -310,6 +310,7 @@ class PeruBankGenerator:
         device_label: str | None = None,
         prior_90d: int = 0,
         recurring: bool = False,
+        decline_reason: str | None = None,
     ) -> Transaction:
         rng = self.rng
         descriptor = rng.choice(merchant.descriptor_patterns or (merchant.display_name,))
@@ -334,8 +335,8 @@ class PeruBankGenerator:
         if merchant.category in ("Delivery", "Transporte", "Suscripción digital"):
             canal = Channel.APP
 
-        motivo = None
-        if status is TransactionStatus.RECHAZADA:
+        motivo = decline_reason
+        if motivo is None and status is TransactionStatus.RECHAZADA:
             motivo = rng.choice(rd.MOTIVOS_RECHAZO)[1]
 
         return Transaction(

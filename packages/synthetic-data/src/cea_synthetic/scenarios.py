@@ -188,6 +188,14 @@ def disputa_fraude(gen: PeruBankGenerator, idx: int = 2) -> Scenario:
         prior_90d=0,
     )
     # Los reintentos rechazados son la evidencia que distingue fraude de olvido.
+    #
+    # El motivo es el mismo en los dos y es el único coherente con la secuencia:
+    # el cargo anterior se aprobó minutos antes, así que la tarjeta no puede
+    # estar vencida ni la cuenta sin fondos. Lo que ocurre es que el monitoreo
+    # del banco ya bloqueó preventivamente. Un motivo al azar por transacción
+    # produce contradicciones que cualquiera del banco detecta en el primer
+    # vistazo, y que restan credibilidad a todo lo demás que muestre el panel.
+    motivo_bloqueo = dict(rd.MOTIVOS_RECHAZO)["bloqueo_preventivo"]
     reintentos = [
         gen.transaction(
             cuenta,
@@ -196,11 +204,26 @@ def disputa_fraude(gen: PeruBankGenerator, idx: int = 2) -> Scenario:
             amount=Decimal("1450.00"),
             status=TransactionStatus.RECHAZADA,
             prior_90d=0,
+            decline_reason=motivo_bloqueo,
         )
         for i in range(2)
     ]
 
-    historial = [foco, *reintentos, *gen.history(cliente, days=45, per_day=0.9)[:20]]
+    # El relleno de fondo se filtra para excluir el comercio del fraude.
+    #
+    # Sin este filtro, el generador puede colocar por azar una compra legítima
+    # anterior en ese mismo comercio, y entonces el panel muestra historial
+    # justo donde la narrativa afirma que no lo hay. El escenario tiene que
+    # sostener lo que dice: es la diferencia entre el caso de fraude y el del
+    # cargo mal entendido, y si los datos la difuminan no se puede demostrar
+    # ninguna de las dos cosas.
+    relleno = [
+        t
+        for t in gen.history(cliente, days=45, per_day=0.9)
+        if t.merchant is None or t.merchant.merchant_id != comercio.merchant_id
+    ][:20]
+
+    historial = [foco, *reintentos, *relleno]
     historial.sort(key=lambda t: t.occurred_at, reverse=True)
 
     eventos = (

@@ -287,9 +287,20 @@ class CallContext(_Base):
     supporting_transaction_ids: tuple[str, ...] = Field(
         default=(),
         description=(
-            "Compras previas en el MISMO comercio. Son la prueba que convierte "
-            "'no reconozco este cargo' en 'ya compró ahí seis veces'; sin ellas el "
-            "copiloto no puede afirmar nada y la disputa escala igual."
+            "Compras ANTERIORES y liquidadas en el mismo comercio. Son la prueba que "
+            "convierte 'no reconozco este cargo' en 'ya compró ahí seis veces'; sin "
+            "ellas el copiloto no puede afirmar nada y la disputa escala igual."
+        ),
+    )
+    related_attempt_ids: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "Intentos posteriores en el mismo comercio, típicamente rechazados. "
+            "Significan lo OPUESTO al historial de compras: un cliente que compra no "
+            "reintenta el mismo monto tras un rechazo, un defraudador probando una "
+            "tarjeta sí. Mezclarlos con las compras previas haría que el panel "
+            "presente la evidencia del fraude como prueba de que el cliente es "
+            "cliente habitual del comercio."
         ),
     )
     generated_at: datetime
