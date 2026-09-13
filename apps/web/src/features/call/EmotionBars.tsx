@@ -138,8 +138,10 @@ export function EmotionBars({ estado }: { estado: EstadoEmocional | null }) {
         <div className="mt-3 flex items-start gap-2 border-t border-border pt-3">
           <Info className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
           <p className="text-[0.7rem] leading-relaxed text-muted-foreground">
-            Calculado sobre la prosodia del cliente —energía, tono y ritmo comparados con su
-            propia voz al inicio de la llamada— y sus interrupciones.{" "}
+            Mide el <span className="font-medium text-foreground">cambio</span> respecto a la
+            propia voz del cliente al inicio de la llamada —energía, tono, ritmo e
+            interrupciones—, no su estado absoluto: quien entra alterado y sigue igual marca
+            neutro, y lo que se detecta es que se caliente o se calme.{" "}
             <span className="font-medium text-foreground">{PENDIENTES.join(", ")}</span> requieren
             un modelo acústico validado para español, todavía sin elegir: la prosodia sola no
             distingue alegría de enfado, porque ambas suenan con energía y tono altos.

@@ -17,6 +17,19 @@ Esas dimensiones se devuelven ausentes, no en cero. Un cero se lee como
 "neutral" y "no lo sé" no es "neutral": si el panel las pintara a la mitad,
 el ejecutivo creería que el sistema afirma algo que no ha medido.
 
+LIMITACIÓN QUE HAY QUE TENER PRESENTE AL LEER LAS BARRAS. Como la referencia es
+la propia voz del cliente al principio de la llamada, esto mide CAMBIO, no
+estado absoluto. Un cliente que entra gritando y sigue gritando establece su
+grito como referencia y se lee como neutro; lo que el motor detecta bien es que
+se altere, o que se calme.
+
+Para la detección de escalamiento —que es el uso que importa— eso basta y
+sobra: lo accionable es el cliente que se está calentando, no el que ya llegó
+caliente y el ejecutivo tiene delante. Para afirmar "este cliente está enfadado"
+en términos absolutos harían falta o un modelo acústico entrenado, o una
+referencia poblacional construida sobre muchas llamadas. Ninguna de las dos
+está todavía.
+
 Sólo se procesa el audio del CLIENTE. La restricción vive en el tipo
 `EmotionFrame`, no aquí.
 """

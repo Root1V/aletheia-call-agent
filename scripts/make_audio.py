@@ -30,10 +30,37 @@ RAIZ_AUDIO = Path("evals/audio")
 TASA = 16000
 
 
-def _say_a_wav(texto: str, voz: str, destino: Path) -> None:
+# Ritmo y volumen por defecto: conversación telefónica tranquila.
+RITMO_NEUTRO = 165
+VOLUMEN_NEUTRO = 1.0
+
+
+def _say_a_wav(texto: str, voz: str, destino: Path, *, ritmo: int, volumen: float) -> None:
+    """Sintetiza un turno con su ritmo y volumen.
+
+    `say` acepta palabras por minuto con -r y volumen con el comando embebido
+    [[volm x]]. Es la única variación prosódica real que se puede producir con
+    él, y basta para que un guion distinga a un cliente tranquilo de uno
+    alterado: medido, un turno a 250 ppm y volumen 1.8 sale un 27% más corto y
+    un 32% más fuerte que el mismo texto en neutro.
+
+    Conviene no confundirlo con emoción sintetizada: aquí la agitación está
+    ESCRITA en el guion, no interpretada por el motor de voz. Sirve para
+    ejercitar el detector, no para demostrar que detecta enfado espontáneo.
+    """
     destino.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(
-        ["say", "-v", voz, "-o", str(destino), "--data-format=LEI16@16000", texto],
+        [
+            "say",
+            "-v",
+            voz,
+            "-r",
+            str(ritmo),
+            "-o",
+            str(destino),
+            "--data-format=LEI16@16000",
+            f"[[volm {volumen:.2f}]] {texto}",
+        ],
         check=True,
         capture_output=True,
     )
@@ -57,9 +84,11 @@ def renderizar(guion: Path, forzar: bool = False) -> dict:
         # El YAML pliega los saltos de línea en espacios; se normalizan para
         # que el texto de referencia del WER sea exactamente lo pronunciado.
         texto = " ".join(turno["texto"].split())
+        ritmo = int(turno.get("ritmo", RITMO_NEUTRO))
+        volumen = float(turno.get("volumen", VOLUMEN_NEUTRO))
         wav = salida / f"{i:02d}-{hablante}.wav"
         if forzar or not wav.exists():
-            _say_a_wav(texto, voces[hablante], wav)
+            _say_a_wav(texto, voces[hablante], wav, ritmo=ritmo, volumen=volumen)
         turnos.append(
             {
                 "indice": i,
@@ -68,6 +97,8 @@ def renderizar(guion: Path, forzar: bool = False) -> dict:
                 "wav": str(wav),
                 "duracion_ms": _duracion_ms(wav),
                 "pausa_antes_ms": turno.get("pausa_antes_ms", 300),
+                "ritmo": ritmo,
+                "volumen": volumen,
             }
         )
 

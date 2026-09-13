@@ -164,3 +164,33 @@ def test_la_referencia_no_persigue_al_hablante(motor) -> None:
     assert sostenido[-1] > 0.3, (
         f"la activación decayó a {sostenido[-1]:.3f} tras el grito sostenido"
     )
+
+
+def test_detecta_que_el_cliente_se_calma(motor) -> None:
+    """El uso que importa es el cambio, y en ambos sentidos.
+
+    Un cliente que se calma es tan informativo como uno que se altera: le dice
+    al ejecutivo que lo que está haciendo funciona.
+    """
+    alterado = _correr(motor, _voz(4.0, amplitud=0.42)).arousal
+    for _ in range(3):
+        calmado = _correr(motor, _voz(4.0, amplitud=0.15)).arousal
+
+    assert calmado < alterado - 0.3
+
+
+def test_quien_entra_alterado_y_sigue_igual_se_lee_neutro() -> None:
+    """Limitación conocida, verificada para que nadie la descubra en una demo.
+
+    La referencia se aprende de los primeros segundos. Si esos segundos ya son
+    de grito, el grito ES la referencia. Afirmar "este cliente está enfadado" en
+    absoluto exigiría un modelo entrenado o una referencia poblacional; ninguna
+    de las dos está todavía, y el panel lo dice.
+    """
+    motor = MotorDeEmocion(sample_rate=SR)
+    motor.abrir("c")
+    # Toda la llamada al mismo nivel alto: nunca hay contraste.
+    _correr(motor, _voz(12.0, amplitud=0.45))
+    f = _correr(motor, _voz(6.0, amplitud=0.45))
+
+    assert abs(f.arousal) < 0.35, "se esperaba lectura neutra: sin contraste no hay señal de cambio"

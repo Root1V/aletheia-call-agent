@@ -1,0 +1,95 @@
+# Guion del caso contrario al insignia.
+#
+# Aquí el cliente NO hizo la compra: no hay historial con el comercio, el
+# consumo salió de un dispositivo desconocido y hubo reintentos rechazados.
+# La atención correcta abre un RECLAMO con su plazo de quince días hábiles.
+#
+# El cliente empieza alterado y se va calmando conforme el ejecutivo toma el
+# control. La agitación está ESCRITA —ritmo y volumen por turno—, no
+# interpretada por el sintetizador: sirve para ejercitar el detector de
+# emoción, no para demostrar que reconoce enfado espontáneo.
+
+scenario_id: disputa_fraude
+descripcion: Consumo fraudulento con reintentos, sin historial en el comercio
+resultado_esperado:
+  abre_caso: true
+  tipo: reclamo
+  motivo: >-
+    Sin compras previas, dispositivo desconocido y dos reintentos rechazados.
+    Corresponde reclamo bajo la Ley 31763.
+
+voces:
+  customer: Paulina
+  agent: Mónica
+
+turnos:
+  - speaker: agent
+    texto: >-
+      Buenos días, le saluda Carlos del banco. ¿En qué le puedo ayudar?
+
+  # El cliente entra alterado: rápido y alto.
+  - speaker: customer
+    pausa_antes_ms: 200
+    ritmo: 245
+    volumen: 1.8
+    texto: >-
+      ¡Me han robado! Tengo un consumo de mil cuatrocientos cincuenta soles que
+      yo no hice. Esto es inaceptable, ya intenté bloquear la tarjeta por la
+      aplicación y no me dejó.
+
+  - speaker: agent
+    pausa_antes_ms: 300
+    texto: >-
+      Entiendo perfectamente, y lamento que esté pasando por esto. Vamos a
+      resolverlo ahora mismo. Ya tengo el consumo a la vista.
+
+  - speaker: customer
+    pausa_antes_ms: 200
+    ritmo: 250
+    volumen: 1.9
+    texto: >-
+      ¡Es que además veo otros dos intentos! ¿Cómo puede ser que pasen cosas
+      así? Quiero que me devuelvan mi dinero hoy mismo.
+
+  - speaker: agent
+    pausa_antes_ms: 400
+    texto: >-
+      Le explico lo que veo. El consumo es de mil cuatrocientos cincuenta soles
+      en AliExpress, hecho desde un dispositivo que no reconocemos como suyo.
+      Usted nunca ha comprado en ese comercio. Los otros dos intentos fueron
+      rechazados porque nuestro monitoreo los bloqueó por prevención.
+
+  - speaker: customer
+    pausa_antes_ms: 350
+    ritmo: 215
+    volumen: 1.4
+    texto: >-
+      O sea que ustedes vieron que era raro y aun así dejaron pasar el primero.
+
+  - speaker: agent
+    pausa_antes_ms: 400
+    texto: >-
+      Así es, y por eso vamos a registrar un reclamo formal. Le corresponde una
+      respuesta en un plazo máximo de quince días hábiles, y voy a bloquear la
+      tarjeta en este momento para que no haya más consumos.
+
+  - speaker: customer
+    pausa_antes_ms: 400
+    ritmo: 175
+    volumen: 1.05
+    texto: >-
+      Está bien. ¿Y el dinero me lo devuelven?
+
+  - speaker: agent
+    pausa_antes_ms: 350
+    texto: >-
+      El extorno se evalúa dentro del reclamo. Le voy a dar el número de folio
+      para que pueda hacer seguimiento, y le confirmo el bloqueo de la tarjeta
+      por mensaje de texto.
+
+  - speaker: customer
+    pausa_antes_ms: 300
+    ritmo: 165
+    volumen: 1.0
+    texto: >-
+      De acuerdo, gracias por la ayuda.
