@@ -1,0 +1,21 @@
+[project]
+name = "cea-synthetic"
+version = "0.1.0"
+description = "Generador de datos sintéticos realistas de banca peruana (es-PE)"
+requires-python = ">=3.12,<3.14"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "cea-contracts",
+    "faker>=30.0",
+    "pydantic>=2.9",
+]
+
+[project.scripts]
+cea-seed = "cea_synthetic.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cea_synthetic"]

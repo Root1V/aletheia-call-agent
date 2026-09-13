@@ -1,0 +1,36 @@
+[project]
+name = "customer-executive-assistant"
+version = "0.1.0"
+description = "Copiloto de atención al cliente bancario en tiempo real — open source"
+requires-python = ">=3.12,<3.14"
+license = { text = "Apache-2.0" }
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+    "packages/contracts",
+    "packages/synthetic-data",
+    "apps/api",
+]
+
+[tool.uv.sources]
+cea-contracts = { workspace = true }
+cea-synthetic = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["packages", "apps", "evals"]

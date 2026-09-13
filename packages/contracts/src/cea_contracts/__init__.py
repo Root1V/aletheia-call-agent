@@ -1,0 +1,108 @@
+"""Contratos compartidos del copiloto de atención al cliente bancario.
+
+Todo servicio del sistema depende de este paquete y de ningún otro del
+monorepo. Es lo que permite reemplazar cualquier modelo sin tocar la UI.
+"""
+
+from .audio import AudioFrame, AudioIngressAdapter
+from .domain import (
+    AccountEvent,
+    AuthFactor,
+    CallContext,
+    Case,
+    Customer,
+    DigitalJourneyEvent,
+    IntentPrediction,
+    Merchant,
+    ProductHolding,
+    Transaction,
+    TrustState,
+)
+from .enums import (
+    AuthLevel,
+    CallFlow,
+    CallIntent,
+    CaseStatus,
+    CaseType,
+    Channel,
+    EmotionLabel,
+    PIIKind,
+    RiskSignalKind,
+    Speaker,
+    TransactionStatus,
+    VulnerabilityKind,
+)
+from .events import (
+    AsrFinal,
+    AsrPartial,
+    BaseEvent,
+    CallEnded,
+    CallStarted,
+    CaseClassified,
+    Citation,
+    ContextEnriched,
+    EmotionFrame,
+    EscalationAlert,
+    Event,
+    IntentPredicted,
+    NluTurn,
+    RiskSignal,
+    SuggestionCompleted,
+    SuggestionFeedback,
+    SuggestionStarted,
+    SuggestionToken,
+    SummaryReady,
+    TurnEnded,
+)
+
+__all__ = [
+    # audio
+    "AudioFrame",
+    "AudioIngressAdapter",
+    # dominio
+    "AccountEvent",
+    "AuthFactor",
+    "CallContext",
+    "Case",
+    "Customer",
+    "DigitalJourneyEvent",
+    "IntentPrediction",
+    "Merchant",
+    "ProductHolding",
+    "Transaction",
+    "TrustState",
+    # enums
+    "AuthLevel",
+    "CallFlow",
+    "CallIntent",
+    "CaseStatus",
+    "CaseType",
+    "Channel",
+    "EmotionLabel",
+    "PIIKind",
+    "RiskSignalKind",
+    "Speaker",
+    "TransactionStatus",
+    "VulnerabilityKind",
+    # eventos
+    "AsrFinal",
+    "AsrPartial",
+    "BaseEvent",
+    "CallEnded",
+    "CallStarted",
+    "CaseClassified",
+    "Citation",
+    "ContextEnriched",
+    "EmotionFrame",
+    "EscalationAlert",
+    "Event",
+    "IntentPredicted",
+    "NluTurn",
+    "RiskSignal",
+    "SuggestionCompleted",
+    "SuggestionFeedback",
+    "SuggestionStarted",
+    "SuggestionToken",
+    "SummaryReady",
+    "TurnEnded",
+]

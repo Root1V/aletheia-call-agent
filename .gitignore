@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Datos generados y artefactos
+data/generated/
+models/
+*.wav
+!evals/scenarios/**/*.wav
+.env
+.env.local
+
+# Infra local
+infra/volumes/
+
+# SO
+.DS_Store
