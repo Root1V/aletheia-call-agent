@@ -31,6 +31,7 @@ async def health(settings: Annotated[Settings, Depends(get_settings)]) -> dict:
     return {
         "status": "ok" if db["ok"] else "degradado",
         "auth_mode": settings.auth_mode,
+        "entorno": settings.environment,
         "postgres": db,
         "presupuesto_latencia_ms": {
             "transcripcion_visible": settings.budget_transcript_ms,

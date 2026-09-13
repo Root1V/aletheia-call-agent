@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .db import close_pool, open_pool
-from .routers import calls, health
+from .routers import auth, calls, health
 
 log = logging.getLogger("cea.api")
 
@@ -19,15 +19,20 @@ log = logging.getLogger("cea.api")
 async def lifespan(app: FastAPI):
     settings = get_settings()
 
-    if settings.auth_mode == "dev":
-        # Avisar fuerte y en cada arranque. El modo dev es cómodo, y por eso es
-        # exactamente el que se hereda por descuido a un entorno compartido.
-        log.warning(
-            "AUTENTICACIÓN EN MODO DEV: las peticiones no se verifican. "
-            "No usar fuera de la máquina del desarrollador (CEA_AUTH_MODE=oidc)."
+    problemas = settings.validar_para_arranque()
+    if problemas:
+        # Negarse a arrancar, no advertir. Una advertencia en el log de
+        # arranque es exactamente lo que nadie lee cuando el despliegue
+        # "funcionó".
+        raise RuntimeError(
+            "Configuración insegura para el entorno '"
+            + settings.environment
+            + "':\n  - "
+            + "\n  - ".join(problemas)
         )
 
     await open_pool(settings.database_url)
+    log.info("API lista (auth=%s, entorno=%s)", settings.auth_mode, settings.environment)
     try:
         yield
     finally:
@@ -53,6 +58,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(health.router)
+    app.include_router(auth.router)
     app.include_router(calls.router)
     return app
 

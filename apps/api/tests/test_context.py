@@ -9,13 +9,12 @@ from __future__ import annotations
 
 import time
 
-import pytest
 from api.services import context_builder
 from cea_contracts import CallIntent, TransactionStatus
 
 from .conftest import requiere_datos
 
-pytestmark = [pytest.mark.asyncio, requiere_datos]
+pytestmark = requiere_datos
 
 # El pre-pop corre antes de descolgar y no compite con el presupuesto de la
 # transcripción (700 ms), pero un margen amplio es lo que permite añadir

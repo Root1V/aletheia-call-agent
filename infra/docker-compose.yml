@@ -77,8 +77,13 @@ services:
       retries: 15
 
   keycloak:
-    # Autenticación del portal (OIDC) con roles ejecutivo/supervisor/admin.
-    # Es el estándar que el área de seguridad de un banco ya sabe auditar.
+    # SSO corporativo, para cuando el banco lo pida.
+    #
+    # No arranca por defecto: la autenticación actual es JWT propio contra la
+    # tabla `users`, y mantener un servicio de identidad encendido que nadie
+    # usa sólo consume memoria y confunde a quien lee el compose. Para
+    # levantarlo:  docker compose --profile sso up -d keycloak
+    profiles: ["sso"]
     image: quay.io/keycloak/keycloak:26.0
     container_name: cea-keycloak
     command: start-dev --import-realm

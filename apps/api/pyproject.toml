@@ -12,6 +12,12 @@ dependencies = [
     "redis>=5.2",
     "psycopg[binary,pool]>=3.2",
     "pyjwt[crypto]>=2.9",
+    "python-jose[cryptography]>=3.3",
+    "passlib[bcrypt]>=1.7.4",
+    # passlib 1.7.4 lee bcrypt.__about__.__version__, atributo que bcrypt
+    # eliminó en 4.1. Sin este tope el login revienta al arrancar con un
+    # AttributeError poco obvio (pyca/bcrypt#684).
+    "bcrypt<4.1",
     "pydantic-settings>=2.6",
     "python-multipart>=0.0.12",
 ]
