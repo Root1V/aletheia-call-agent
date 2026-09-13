@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .db import close_pool, open_pool
-from .routers import auth, calls, health, workspace
+from .routers import auth, calls, health, stream, workspace
 
 log = logging.getLogger("cea.api")
 
@@ -61,6 +61,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(calls.router)
     app.include_router(workspace.router)
+    app.include_router(stream.router)
     return app
 
 

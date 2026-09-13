@@ -53,11 +53,27 @@ make up        # Postgres+pgvector, Redis, MinIO, LiveKit
 make migrate   # esquema
 make seed      # dataset sintético es-PE, reproducible por semilla
 make admin USER=carlos NAME="Carlos Ruiz"   # primer usuario; imprime la contraseña
+make models    # modelos de voz (muestra la licencia de cada uno)
+make audio     # renderiza los guiones a audio con `say` (macOS)
 make dev       # API en :8000 y portal en :5180
 ```
 
 Abrir <http://localhost:5180> e iniciar sesión. La bandeja muestra cinco
 escenarios guionados.
+
+### Ver la transcripción en vivo
+
+Con el portal abierto en una llamada, en otra terminal:
+
+```bash
+make replay
+```
+
+Reproduce el guion respetando su cronología —silencios incluidos, porque la
+detección de fin de turno es exactamente eso— y la transcripción va apareciendo
+en el panel. Los turnos aún abiertos se pintan en cursiva y atenuados: el texto
+parcial todavía puede cambiar, y un ejecutivo que lea en voz alta una hipótesis
+no consolidada le está diciendo al cliente algo que el sistema aún no afirma.
 
 > Los puertos se configuran en `infra/.env`. Redis sale por el **6380** porque
 > el 6379 suele estar ocupado por otro servicio en la máquina de desarrollo.
@@ -99,12 +115,16 @@ más rápida de perder la confianza.
 | 0 | Monorepo, contratos, infraestructura, datos sintéticos | ✅ |
 | — | Autenticación, portal con sidebar, tema claro/oscuro | ✅ |
 | 2 | Contexto de llamada, enriquecimiento, predicción de intención | ✅ |
-| 1 | Transcripción en vivo (LiveKit + ASR en streaming) | pendiente |
+| 1 | Transcripción en vivo (ASR en streaming + bus + WebSocket) | ✅ parcial |
 | 3 | Emoción del cliente en tiempo real | pendiente |
 | 4 | RAG y sugerencia generativa con citación obligatoria | pendiente |
 | 5 | Clasificación reclamo/requerimiento (Ley 31763) | pendiente |
 | 6 | Resumen y tipificación post-llamada | pendiente |
 | 7 | Endurecimiento: PII, auditoría, RBAC, observabilidad | pendiente |
+
+La Fase 1 está completa por el camino de reproducción (`FileReplayAdapter`), que
+es el que sostiene los tests y la evaluación. Falta el adaptador de LiveKit para
+audio de micrófono en vivo; el pipeline no cambia, sólo la fuente de las tramas.
 
 **Acciones ejecutables (RF-16) están fuera del alcance actual, por decisión.**
 Conviene tenerlo presente al medir: el sistema ataca los segmentos del 45%, 54%
@@ -135,6 +155,20 @@ monto en el mismo comercio con minutos de diferencia no son indicio de
 duplicado: son un duplicado. Dejar que la suma de tres corazonadas tumbe un
 hecho comprobado es un error de diseño, no de ajuste.
 
+**El reconocimiento se mide, no se promete.** `make eval-asr` corre el guion
+completo y reporta WER por hablante, siempre también sobre audio degradado a
+8 kHz µ-law. La telefonía real no entrega micrófono limpio, y medir sólo con
+audio bueno produce un número que se ve bien en una presentación y no se parece
+a producción. Sobre el guion actual: **5.31%**, con la advertencia de que macOS
+no trae voz peruana y las voces disponibles son de España y México.
+
+**Los pesos de los modelos no se versionan.** `make models` los descarga y
+muestra la licencia de cada uno. Además del tamaño, cada modelo trae términos
+distintos de la Apache-2.0 del proyecto: descargándolos, el código conserva su
+licencia y el modelo la suya. Conviene saber que el único modelo de streaming en
+español del catálogo de sherpa-onnx es CC-BY-SA; la alternativa de licencia
+limpia (NeMo, CC-BY-4.0) está declarada en el registro y no hace streaming.
+
 **La latencia es el requisito no funcional número uno.** Si la sugerencia llega
 después de que el ejecutivo ya respondió, el sistema pierde la confianza en una
 semana. Objetivos: transcripción visible **<700 ms**, sugerencia **<1.5 s**. El
@@ -163,7 +197,8 @@ leerá esas mismas variables en vez de traer los colores escritos a mano.
 
 ```
 apps/
-  api/                 FastAPI: autenticación, contexto de llamada, datos del portal
+  api/                 FastAPI: autenticación, contexto, datos del portal, WebSocket
+  agent-worker/        pipeline de la llamada: ingesta → reconocimiento → bus
   web/                 React + TS: portal del ejecutivo
     src/components/ui/   primitivos (patrón shadcn)
     src/features/        auth, tema, paneles de la llamada
@@ -171,6 +206,12 @@ apps/
 packages/
   contracts/           esquemas de eventos y dominio (fuente de verdad)
   synthetic-data/      generador y escenarios es-PE
+  eventbus/            bus de la llamada sobre Redis Streams
+services/
+  asr/                 reconocimiento en streaming y sus métricas
+evals/
+  scenarios/           guiones reproducibles
+  runners/             evaluación de WER y latencia
 scripts/
   create_admin.py      alta de usuarios: el único camino
 infra/

@@ -160,3 +160,75 @@ export interface InboundCall {
   scenario_id: string;
   narrative: string;
 }
+
+// ── Eventos del bus de la llamada ───────────────────────────────────────────
+//
+// Espejo de `packages/contracts/events.py`. Sólo se declaran los que el portal
+// consume hoy; los demás llegan por el mismo canal y se ignoran sin ruido.
+
+export interface AsrPartialEvent {
+  type: "asr.partial";
+  call_id: string;
+  seq: number;
+  ts_ms: number;
+  speaker: Speaker;
+  turn_id: string;
+  text: string;
+  started_at_ms: number;
+}
+
+export interface AsrFinalEvent {
+  type: "asr.final";
+  call_id: string;
+  seq: number;
+  ts_ms: number;
+  speaker: Speaker;
+  turn_id: string;
+  text: string;
+  started_at_ms: number;
+  ended_at_ms: number;
+  reconciled: boolean;
+}
+
+export interface CallStartedEvent {
+  type: "call.started";
+  call_id: string;
+  seq: number;
+  ts_ms: number;
+  customer_id: string;
+  agent_id: string;
+  ingress: string;
+}
+
+export interface CallEndedEvent {
+  type: "call.ended";
+  call_id: string;
+  seq: number;
+  ts_ms: number;
+  duration_ms: number;
+  reason: string;
+}
+
+export interface StreamControlEvent {
+  type: "stream.ready" | "stream.heartbeat";
+  call_id?: string;
+}
+
+export type CallEvent =
+  | AsrPartialEvent
+  | AsrFinalEvent
+  | CallStartedEvent
+  | CallEndedEvent
+  | StreamControlEvent
+  | { type: string; [k: string]: unknown };
+
+/** Un turno tal como lo pinta la UI. */
+export interface Turno {
+  turnId: string;
+  speaker: Speaker;
+  text: string;
+  isFinal: boolean;
+  startedAtMs: number;
+  /** Orden de llegada: mantiene estable la posición en pantalla. */
+  seq: number;
+}

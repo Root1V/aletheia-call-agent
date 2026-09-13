@@ -8,6 +8,7 @@ tiempo real, lo que deja margen de sobra para varias llamadas por proceso.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -41,6 +42,20 @@ log = logging.getLogger("cea.asr")
 # RTF 0.02 son unos 30 ms de cómputo— y ocurre cuando el turno ya terminó, así
 # que no entra en la latencia que el ejecutivo percibe.
 COLA_DE_SILENCIO_MS = 1500
+
+
+_TIENE_LETRAS = re.compile(r"[^\W_]", re.UNICODE)
+
+
+def _es_solo_puntuacion(texto: str) -> bool:
+    """Si el texto no contiene ninguna letra ni dígito.
+
+    Tras cerrar un turno, el modelo emite a veces el signo de puntuación final
+    como un turno nuevo: queda un "." suelto con su propio turn_id. En la UI
+    eso son burbujas vacías con un punto dentro, y aguas abajo son turnos sin
+    contenido que dispararían una sugerencia del copiloto sobre nada.
+    """
+    return not _TIENE_LETRAS.search(texto)
 
 
 @dataclass(slots=True)
@@ -155,7 +170,7 @@ class SherpaStreamingASR:
 
         # Fin de turno detectado por el propio reconocedor (silencio sostenido).
         if self._recognizer.is_endpoint(estado.stream):
-            if texto:
+            if texto and not _es_solo_puntuacion(texto):
                 yield Hypothesis(
                     speaker=speaker,
                     turn_id=estado.turn_id,
@@ -172,7 +187,7 @@ class SherpaStreamingASR:
             estado.inicio_turno_ms = estado.posicion_ms
             return
 
-        if texto and texto != estado.texto_emitido:
+        if texto and texto != estado.texto_emitido and not _es_solo_puntuacion(texto):
             estado.texto_emitido = texto
             yield Hypothesis(
                 speaker=speaker,
@@ -199,7 +214,7 @@ class SherpaStreamingASR:
             self._recognizer.decode_stream(estado.stream)
 
         texto = self._recognizer.get_result(estado.stream).strip()
-        if texto:
+        if texto and not _es_solo_puntuacion(texto):
             yield Hypothesis(
                 speaker=speaker,
                 turn_id=estado.turn_id,

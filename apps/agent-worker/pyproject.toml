@@ -1,0 +1,24 @@
+[project]
+name = "cea-agent-worker"
+version = "0.1.0"
+description = "Worker de llamada: ingesta de audio, reconocimiento y publicación de eventos"
+requires-python = ">=3.12,<3.14"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "cea-contracts",
+    "cea-asr",
+    "cea-bus",
+    "numpy>=2.0",
+    "pyyaml>=6.0",
+    "pydantic-settings>=2.6",
+]
+
+[project.scripts]
+cea-replay = "agent_worker.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_worker"]

@@ -17,8 +17,10 @@ supported-markers = [
 
 [manifest]
 members = [
+    "cea-agent-worker",
     "cea-api",
     "cea-asr",
+    "cea-bus",
     "cea-contracts",
     "cea-synthetic",
     "customer-executive-assistant",
@@ -93,11 +95,35 @@ wheels = [
 ]
 
 [[package]]
+name = "cea-agent-worker"
+version = "0.1.0"
+source = { editable = "apps/agent-worker" }
+dependencies = [
+    { name = "cea-asr", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "cea-bus", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "cea-contracts", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "numpy", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "pydantic-settings", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "pyyaml", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cea-asr", editable = "services/asr" },
+    { name = "cea-bus", editable = "packages/eventbus" },
+    { name = "cea-contracts", editable = "packages/contracts" },
+    { name = "numpy", specifier = ">=2.0" },
+    { name = "pydantic-settings", specifier = ">=2.6" },
+    { name = "pyyaml", specifier = ">=6.0" },
+]
+
+[[package]]
 name = "cea-api"
 version = "0.1.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "bcrypt", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "cea-bus", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "cea-contracts", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "cea-synthetic", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "fastapi", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
@@ -114,6 +140,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "bcrypt", specifier = "<4.1" },
+    { name = "cea-bus", editable = "packages/eventbus" },
     { name = "cea-contracts", editable = "packages/contracts" },
     { name = "cea-synthetic", editable = "packages/synthetic-data" },
     { name = "fastapi", specifier = ">=0.115" },
@@ -148,6 +175,21 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "sherpa-onnx", specifier = ">=1.13" },
     { name = "sherpa-onnx-core", specifier = ">=1.13" },
+]
+
+[[package]]
+name = "cea-bus"
+version = "0.1.0"
+source = { editable = "packages/eventbus" }
+dependencies = [
+    { name = "cea-contracts", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "redis", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cea-contracts", editable = "packages/contracts" },
+    { name = "redis", specifier = ">=5.2" },
 ]
 
 [[package]]

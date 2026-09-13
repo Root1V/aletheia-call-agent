@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card } from "@/components/ui/card";
 import { Full360 } from "@/features/call/Full360";
+import { LiveTranscript } from "@/features/call/LiveTranscript";
 import { PendingPanel } from "@/features/call/PendingPanel";
 import { TransactionEvidence } from "@/features/call/TransactionEvidence";
 import { TrustBar } from "@/features/call/TrustBar";
+import { useCallStream } from "@/features/call/useCallStream";
 import { WhyCalling } from "@/features/call/WhyCalling";
 import { mensajeDeError } from "@/lib/api/client";
 import { endpoints, queryKeys } from "@/lib/api/endpoints";
@@ -19,6 +21,8 @@ import { endpoints, queryKeys } from "@/lib/api/endpoints";
 export function CallWorkspacePage() {
   const { callId = "" } = useParams();
   const navigate = useNavigate();
+
+  const { turnos, estado: estadoStream } = useCallStream(callId);
 
   const contexto = useQuery({
     queryKey: queryKeys.callContext(callId),
@@ -108,10 +112,7 @@ export function CallWorkspacePage() {
 
           <div className="space-y-3 2xl:contents">
             <div className="space-y-3">
-            <PendingPanel titulo="Conversación en vivo" fase="Fase 1">
-              Transcripción bilateral con separación por hablante y parciales que se consolidan al
-              cerrar cada turno. Requiere el agente de LiveKit y el servicio de ASR en streaming.
-            </PendingPanel>
+            <LiveTranscript turnos={turnos} estado={estadoStream} />
             <PendingPanel titulo="Emoción del cliente" fase="Fase 3">
               Barras en vivo de frustración, satisfacción, confusión y urgencia, calculadas sólo
               sobre el audio del cliente. Fusiona señal acústica, textual y conversacional, con
