@@ -16,6 +16,7 @@ members = [
     "services/asr",
     "services/emotion",
     "services/redaction",
+    "services/llm-gateway",
 ]
 
 [tool.uv]
@@ -51,6 +52,7 @@ cea-asr = { workspace = true }
 cea-bus = { workspace = true }
 cea-emotion = { workspace = true }
 cea-redaction = { workspace = true }
+cea-llm = { workspace = true }
 cea-agent-worker = { workspace = true }
 
 [dependency-groups]

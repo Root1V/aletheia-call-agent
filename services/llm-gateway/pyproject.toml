@@ -1,0 +1,18 @@
+[project]
+name = "cea-llm"
+version = "0.1.0"
+description = "Acceso a modelos de lenguaje de la plataforma Prometheus"
+requires-python = ">=3.12,<3.14"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "cea-contracts",
+    "axonium>=1.0.0rc3",
+    "pydantic-settings>=2.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cea_llm"]

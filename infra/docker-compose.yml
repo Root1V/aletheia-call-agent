@@ -59,6 +59,12 @@ services:
 
   minio:
     # Audio de llamadas y artefactos de evaluación.
+    #
+    # Publicado en el 9100, no en el 9000 por defecto: ahí escucha el servicio
+    # de autenticación de la plataforma Prometheus, al que apunta el SDK de
+    # Axonium. Conviven porque uno toma IPv4 y el otro IPv6, pero depender de
+    # eso es pedir una depuración de dos horas el día que cambie el orden de
+    # arranque.
     image: minio/minio:latest
     container_name: cea-minio
     command: server /data --console-address ":9001"
@@ -66,7 +72,7 @@ services:
       MINIO_ROOT_USER: cea
       MINIO_ROOT_PASSWORD: cea_dev_minio
     ports:
-      - "${CEA_MINIO_PORT:-9000}:9000"
+      - "${CEA_MINIO_PORT:-9100}:9000"
       - "${CEA_MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio_data:/data

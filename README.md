@@ -215,6 +215,10 @@ hábiles de la Ley 31763 se cuentan sobre el calendario local.
 **Backend** — FastAPI · SQL plano con migraciones numeradas · PostgreSQL 17 +
 pgvector · python-jose + passlib[bcrypt] · pydantic-settings · uv.
 
+**Voz e inferencia** — sherpa-onnx (ASR en streaming) · `axonium` para los
+modelos de la plataforma Prometheus, detrás de un protocolo propio para que el
+copiloto, la clasificación de reclamos y el resumen no conozcan al proveedor.
+
 **Frontend** — React 19 + Vite · TypeScript · Tailwind CSS v4 con el patrón
 shadcn/ui (paleta en variables CSS) · @tanstack/react-query · react-router-dom ·
 axios con interceptors · lucide-react · ESLint 9 flat config.
@@ -241,6 +245,7 @@ services/
   asr/                 reconocimiento en streaming y sus métricas
   emotion/             estado emocional a partir de prosodia y conversación
   redaction/           redacción de PII, incluidos números dictados en voz alta
+  llm-gateway/         acceso a modelos vía el SDK de Axonium
 evals/
   scenarios/           guiones reproducibles
   runners/             evaluación de WER y latencia
