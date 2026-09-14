@@ -24,6 +24,7 @@ members = [
     "cea-contracts",
     "cea-emotion",
     "cea-llm",
+    "cea-rag",
     "cea-redaction",
     "cea-synthetic",
     "customer-executive-assistant",
@@ -254,6 +255,25 @@ requires-dist = [
     { name = "axonium", specifier = ">=1.0.0rc3" },
     { name = "cea-contracts", editable = "packages/contracts" },
     { name = "pydantic-settings", specifier = ">=2.6" },
+]
+
+[[package]]
+name = "cea-rag"
+version = "0.1.0"
+source = { editable = "services/rag" }
+dependencies = [
+    { name = "cea-contracts", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "cea-llm", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "psycopg", extra = ["binary", "pool"], marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "pyyaml", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cea-contracts", editable = "packages/contracts" },
+    { name = "cea-llm", editable = "services/llm-gateway" },
+    { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2" },
+    { name = "pyyaml", specifier = ">=6.0" },
 ]
 
 [[package]]

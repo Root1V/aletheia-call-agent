@@ -10,7 +10,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml
 PSQL    := docker exec -i cea-postgres psql -U cea -d cea -v ON_ERROR_STOP=1
 
 .DEFAULT_GOAL := help
-.PHONY: help up down logs migrate seed admin models audio replay eval-asr api web dev test lint fmt check clean reset
+.PHONY: help up down logs migrate seed admin models audio kb replay eval-asr api web dev test lint fmt check clean reset
 
 help:  ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -47,6 +47,9 @@ models:  ## Descarga los modelos de voz a models/ (muestra sus licencias)
 
 audio:  ## Renderiza los guiones de evals/scenarios a audio (requiere macOS)
 	uv run python scripts/make_audio.py
+
+kb:  ## Indexa la base de conocimiento (requiere credenciales de la plataforma)
+	uv run python scripts/index_kb.py
 
 replay:  ## Reproduce un guion como llamada en vivo (SCENARIO=... VEL=...)
 	uv run cea-replay --scenario $(or $(SCENARIO),disputa_cargo_no_reconocido) \
