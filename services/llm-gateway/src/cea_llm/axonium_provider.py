@@ -8,10 +8,24 @@ from collections.abc import AsyncIterator
 
 from axonium import AsyncAxonium, AxoniumError
 
-from .base import Catalogo, Fragmento, Mensaje, ProveedorLLM, Respuesta
+from .base import Catalogo, EsfuerzoRazonamiento, Fragmento, Mensaje, ProveedorLLM, Respuesta
 from .config import AjustesLLM, obtener_ajustes
 
 log = logging.getLogger("cea.llm")
+
+
+def _motivo_de_fin(completion) -> str | None:
+    """Motivo por el que paró la generación.
+
+    Vive en `choices[0]`, no en la completion. Leerlo del sitio equivocado no
+    lanza nada: `getattr` devuelve None, `truncada` sale siempre False y una
+    respuesta cortada a mitad de una cifra —"la comisión es de cuarenta y
+    cin"— pasa por buena.
+    """
+    opciones = getattr(completion, "choices", None) or []
+    if not opciones:
+        return None
+    return getattr(opciones[0], "finish_reason", None)
 
 
 class CredencialesFaltantes(RuntimeError):
@@ -58,7 +72,7 @@ class AxoniumProvider(ProveedorLLM):
 
     async def aclose(self) -> None:
         if self._cliente is not None:
-            await self._cliente.close()
+            await self._cliente.aclose()
             self._cliente = None
 
     async def catalogo(self) -> Catalogo:
@@ -96,8 +110,19 @@ class AxoniumProvider(ProveedorLLM):
         return cat.slugs[0]
 
     @staticmethod
-    def _a_wire(mensajes: list[Mensaje]) -> list[dict[str, str]]:
-        return [{"role": m.rol, "content": m.contenido} for m in mensajes]
+    def _a_wire(
+        mensajes: list[Mensaje], esfuerzo: EsfuerzoRazonamiento | None = None
+    ) -> list[dict[str, str]]:
+        """Convierte al formato del gateway, anteponiendo el esfuerzo si se pide.
+
+        La instrucción va como mensaje de sistema propio y al principio, que es
+        la convención que estos modelos entienden. Mezclarla en el prompt del
+        usuario no la respetan.
+        """
+        salida = [{"role": m.rol, "content": m.contenido} for m in mensajes]
+        if esfuerzo:
+            salida.insert(0, {"role": "system", "content": f"Reasoning: {esfuerzo}"})
+        return salida
 
     async def completar(
         self,
@@ -106,6 +131,7 @@ class AxoniumProvider(ProveedorLLM):
         modelo: str | None = None,
         max_tokens: int = 512,
         temperatura: float = 0.2,
+        esfuerzo: EsfuerzoRazonamiento | None = None,
     ) -> Respuesta:
         cliente = self._construir()
         slug = await self._resolver_modelo(modelo)
@@ -113,7 +139,7 @@ class AxoniumProvider(ProveedorLLM):
         try:
             completion = await cliente.chat.completions.create(
                 model=slug,
-                messages=self._a_wire(mensajes),
+                messages=self._a_wire(mensajes, esfuerzo),
                 max_tokens=max_tokens,
                 temperature=temperatura,
             )
@@ -132,7 +158,7 @@ class AxoniumProvider(ProveedorLLM):
             tokens_entrada=getattr(uso, "prompt_tokens", None),
             tokens_salida=getattr(uso, "completion_tokens", None),
             latencia_ms=round((time.perf_counter() - inicio) * 1000, 1),
-            truncada=getattr(completion, "finish_reason", None) == "length",
+            truncada=_motivo_de_fin(completion) == "length",
         )
 
     async def transmitir(
@@ -142,12 +168,13 @@ class AxoniumProvider(ProveedorLLM):
         modelo: str | None = None,
         max_tokens: int = 512,
         temperatura: float = 0.2,
+        esfuerzo: EsfuerzoRazonamiento | None = None,
     ) -> AsyncIterator[Fragmento]:
         cliente = self._construir()
         slug = await self._resolver_modelo(modelo)
         async with cliente.chat.completions.stream(
             model=slug,
-            messages=self._a_wire(mensajes),
+            messages=self._a_wire(mensajes, esfuerzo),
             max_tokens=max_tokens,
             temperature=temperatura,
         ) as flujo:

@@ -15,6 +15,22 @@ from typing import Literal, Protocol, runtime_checkable
 
 Rol = Literal["system", "user", "assistant"]
 
+EsfuerzoRazonamiento = Literal["minimal", "low", "medium", "high"]
+"""Cuánto piensa el modelo antes de contestar.
+
+Los modelos de este despliegue razonan por defecto y NO producen ni un token de
+respuesta hasta terminar. Medido sobre gpt-oss-20b con una pregunta del flujo
+de reclamos:
+
+    por defecto ............ 2542 ms hasta el primer token de respuesta
+    "Reasoning: low" ....... 1623 ms
+    "Reasoning: minimal" ... 1701 ms
+
+No es un ajuste de calidad opcional: con el presupuesto de 1.5 s para la
+sugerencia, dejarlo por defecto consume el presupuesto entero antes de decir
+una palabra.
+"""
+
 
 @dataclass(slots=True, frozen=True)
 class Mensaje:
