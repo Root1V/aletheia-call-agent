@@ -15,7 +15,7 @@ from typing import Literal, Protocol, runtime_checkable
 
 Rol = Literal["system", "user", "assistant"]
 
-EsfuerzoRazonamiento = Literal["minimal", "low", "medium", "high"]
+EsfuerzoRazonamiento = Literal["ninguno", "minimal", "low", "medium", "high"]
 """Cuánto piensa el modelo antes de contestar.
 
 Los modelos de este despliegue razonan por defecto y NO producen ni un token de
@@ -26,9 +26,16 @@ de reclamos:
     "Reasoning: low" ....... 1623 ms
     "Reasoning: minimal" ... 1701 ms
 
+"ninguno" desactiva el razonamiento por completo, y es lo que usa el copiloto.
+Cada familia lo hace a su manera —Qwen3 con el sufijo /no_think, gpt-oss con un
+mensaje de sistema— así que la traducción vive en el proveedor y quien llama
+sólo expresa la intención.
+
 No es un ajuste de calidad opcional: con el presupuesto de 1.5 s para la
 sugerencia, dejarlo por defecto consume el presupuesto entero antes de decir
-una palabra.
+una palabra. Medido sobre qwen3-8b-q6 con una pregunta del flujo de reclamos:
+sin razonamiento el primer token llega a los 86 ms; con él, la generación
+entera terminó a los 4.6 s sin haber emitido un solo token de respuesta.
 """
 
 

@@ -111,17 +111,40 @@ class AxoniumProvider(ProveedorLLM):
 
     @staticmethod
     def _a_wire(
-        mensajes: list[Mensaje], esfuerzo: EsfuerzoRazonamiento | None = None
+        mensajes: list[Mensaje],
+        esfuerzo: EsfuerzoRazonamiento | None = None,
+        modelo: str = "",
     ) -> list[dict[str, str]]:
-        """Convierte al formato del gateway, anteponiendo el esfuerzo si se pide.
+        """Convierte al formato del gateway y aplica el esfuerzo de razonamiento.
 
-        La instrucción va como mensaje de sistema propio y al principio, que es
-        la convención que estos modelos entienden. Mezclarla en el prompt del
-        usuario no la respetan.
+        Cada familia lo expresa a su manera, y equivocarse no da error: el
+        modelo simplemente ignora la instrucción y sigue pensando.
+
+        - Qwen3 entiende el sufijo `/no_think` en el mensaje del usuario. Como
+          mensaje de sistema no surte efecto.
+        - gpt-oss entiende `Reasoning: <nivel>` como mensaje de sistema al
+          principio. Dentro del prompt del usuario no lo respeta.
         """
         salida = [{"role": m.rol, "content": m.contenido} for m in mensajes]
-        if esfuerzo:
-            salida.insert(0, {"role": "system", "content": f"Reasoning: {esfuerzo}"})
+        if not esfuerzo:
+            return salida
+
+        es_qwen = "qwen" in modelo.lower()
+
+        if esfuerzo == "ninguno":
+            if es_qwen:
+                # Va al final del último mensaje del usuario, que es donde el
+                # plantilla de chat de Qwen3 lo busca.
+                for i in range(len(salida) - 1, -1, -1):
+                    if salida[i]["role"] == "user":
+                        salida[i] = {**salida[i], "content": salida[i]["content"] + " /no_think"}
+                        break
+                return salida
+            # gpt-oss no tiene un "apagado": lo más bajo es el mínimo.
+            salida.insert(0, {"role": "system", "content": "Reasoning: minimal"})
+            return salida
+
+        salida.insert(0, {"role": "system", "content": f"Reasoning: {esfuerzo}"})
         return salida
 
     async def completar(
@@ -139,7 +162,7 @@ class AxoniumProvider(ProveedorLLM):
         try:
             completion = await cliente.chat.completions.create(
                 model=slug,
-                messages=self._a_wire(mensajes, esfuerzo),
+                messages=self._a_wire(mensajes, esfuerzo, slug),
                 max_tokens=max_tokens,
                 temperature=temperatura,
             )
@@ -174,7 +197,7 @@ class AxoniumProvider(ProveedorLLM):
         slug = await self._resolver_modelo(modelo)
         async with cliente.chat.completions.stream(
             model=slug,
-            messages=self._a_wire(mensajes, esfuerzo),
+            messages=self._a_wire(mensajes, esfuerzo, slug),
             max_tokens=max_tokens,
             temperature=temperatura,
         ) as flujo:

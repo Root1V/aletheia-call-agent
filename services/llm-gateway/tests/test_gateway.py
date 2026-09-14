@@ -131,3 +131,50 @@ def test_el_motivo_de_fin_se_lee_de_la_opcion_no_de_la_completion() -> None:
 
     assert _motivo_de_fin(SimpleNamespace(choices=[])) is None
     assert _motivo_de_fin(SimpleNamespace()) is None
+
+
+def test_qwen3_apaga_el_razonamiento_con_sufijo_en_el_usuario() -> None:
+    """Cada familia lo expresa a su manera, y equivocarse NO da error.
+
+    El modelo simplemente ignora la instrucción y sigue pensando; el síntoma es
+    latencia, no un fallo. En Qwen3 el sufijo va al final del último mensaje del
+    usuario, que es donde su plantilla de chat lo busca.
+    """
+    convertidos = AxoniumProvider._a_wire(  # noqa: SLF001
+        [Mensaje("system", "Eres un copiloto"), Mensaje("user", "Explica el cargo")],
+        esfuerzo="ninguno",
+        modelo="qwen3-8b-q6",
+    )
+
+    assert convertidos[-1]["content"].endswith("/no_think")
+    assert convertidos[0]["role"] == "system"
+    # Y no se le añade un mensaje de sistema que Qwen3 ignoraría.
+    assert not any("Reasoning:" in m["content"] for m in convertidos)
+
+
+def test_gpt_oss_apaga_el_razonamiento_con_mensaje_de_sistema() -> None:
+    """gpt-oss no tiene apagado real: lo más bajo que admite es el mínimo."""
+    convertidos = AxoniumProvider._a_wire(  # noqa: SLF001
+        [Mensaje("user", "Explica el cargo")],
+        esfuerzo="ninguno",
+        modelo="gpt-oss-20b-mxfp4",
+    )
+
+    assert convertidos[0] == {"role": "system", "content": "Reasoning: minimal"}
+    assert "/no_think" not in convertidos[-1]["content"]
+
+
+def test_el_sufijo_va_al_ultimo_mensaje_del_usuario() -> None:
+    """En una conversación con varios turnos, no al primero que aparezca."""
+    convertidos = AxoniumProvider._a_wire(  # noqa: SLF001
+        [
+            Mensaje("user", "primera pregunta"),
+            Mensaje("assistant", "respuesta"),
+            Mensaje("user", "segunda pregunta"),
+        ],
+        esfuerzo="ninguno",
+        modelo="qwen3-8b-q6",
+    )
+
+    assert convertidos[0]["content"] == "primera pregunta"
+    assert convertidos[2]["content"] == "segunda pregunta /no_think"
