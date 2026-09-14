@@ -9,6 +9,7 @@ dependencies = [
     "cea-asr",
     "cea-bus",
     "cea-emotion",
+    "cea-redaction",
     "numpy>=2.0",
     "pyyaml>=6.0",
     "pydantic-settings>=2.6",

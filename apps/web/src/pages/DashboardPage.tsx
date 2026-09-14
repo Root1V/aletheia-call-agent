@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { AvisoDatosCaducados } from "@/components/AvisoDatosCaducados";
 import { AppShell } from "@/components/layout/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { Cargando, ErrorDeCarga, Vacio } from "@/components/StateMessage";
@@ -45,6 +46,8 @@ export function DashboardPage() {
       }
     >
       <div className="space-y-5">
+        <AvisoDatosCaducados horas={stats.data?.datos_sembrados_hace_horas ?? null} />
+
         {stats.isPending ? (
           <Cargando texto="Cargando indicadores…" />
         ) : stats.isError ? (

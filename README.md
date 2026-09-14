@@ -120,7 +120,7 @@ más rápida de perder la confianza.
 | 4 | RAG y sugerencia generativa con citación obligatoria | pendiente |
 | 5 | Clasificación reclamo/requerimiento (Ley 31763) | pendiente |
 | 6 | Resumen y tipificación post-llamada | pendiente |
-| 7 | Endurecimiento: PII, auditoría, RBAC, observabilidad | pendiente |
+| 7 | Endurecimiento: PII, auditoría, RBAC, observabilidad | ✅ parcial (PII) |
 
 La Fase 1 está completa por el camino de reproducción (`FileReplayAdapter`), que
 es el que sostiene los tests y la evaluación. Falta el adaptador de LiveKit para
@@ -154,6 +154,20 @@ incidente regulatorio.
 monto en el mismo comercio con minutos de diferencia no son indicio de
 duplicado: son un duplicado. Dejar que la suma de tres corazonadas tumbe un
 hecho comprobado es un error de diseño, no de ajuste.
+
+**Los números dictados en voz alta son el caso que rompe la redacción estándar.**
+Nadie deletrea su DNI: lo dice. El reconocedor transcribe "cuatro, cinco, seis,
+siete, ocho, nueve, uno, dos", y cualquier detector de PII de biblioteca
+—Presidio, una expresión regular, un NER— busca ocho dígitos seguidos y no
+encuentra nada. No falla ni avisa: informa cero coincidencias mientras el número
+queda en claro en la base. Por eso `services/redaction` normaliza las secuencias
+habladas antes de aplicar los detectores, y retiene los parciales mientras hay
+un dictado en curso: publicarlos cifra a cifra filtraría el número completo
+antes de que ningún patrón pudiera reconocerlo.
+
+Todo esto ocurre **antes** de publicar al bus. Una vez que el número entra a la
+base de datos o al historial de un proveedor de modelos, tacharlo después no lo
+des-publica.
 
 **La emoción se mide sólo donde hay evidencia.** El motor actual usa la señal
 prosódica —energía, tono y ritmo comparados con la línea base del propio
@@ -226,6 +240,7 @@ packages/
 services/
   asr/                 reconocimiento en streaming y sus métricas
   emotion/             estado emocional a partir de prosodia y conversación
+  redaction/           redacción de PII, incluidos números dictados en voz alta
 evals/
   scenarios/           guiones reproducibles
   runners/             evaluación de WER y latencia

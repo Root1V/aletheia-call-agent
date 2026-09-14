@@ -20,6 +20,7 @@ DEFAULT_DSN = os.environ.get("CEA_DATABASE_URL", "postgresql://cea:cea_dev@local
 
 # Orden inverso al de las dependencias: los hijos primero.
 _TABLAS_EN_ORDEN_DE_BORRADO = (
+    "seed_info",
     "demo_scenarios",
     "audit_log",
     "emotion_timeline",
@@ -315,6 +316,10 @@ def seed(
                 )
                 report.transactions += len(historial)
 
+        cur.execute(
+            "INSERT INTO seed_info (seeded_at, seed_value) VALUES (now(), %s)",
+            (seed_value,),
+        )
         conn.commit()
 
     return report

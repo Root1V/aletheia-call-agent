@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, PhoneIncoming } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { AvisoDatosCaducados } from "@/components/AvisoDatosCaducados";
 import { AppShell } from "@/components/layout/AppShell";
 import { Cargando, ErrorDeCarga, Vacio } from "@/components/StateMessage";
 import { Badge } from "@/components/ui/badge";
@@ -12,12 +13,17 @@ import { ETIQUETA_INTENCION } from "@/lib/intents";
 
 export function InboxPage() {
   const bandeja = useQuery({ queryKey: queryKeys.inbound, queryFn: endpoints.inbound });
+  const stats = useQuery({ queryKey: queryKeys.overview, queryFn: endpoints.overview });
 
   return (
     <AppShell
       titulo="Bandeja de llamadas"
       subtitulo="Escenarios guionados y reproducibles: los mismos datos alimentan la demo y la evaluación"
     >
+      <div className="mb-4 max-w-4xl">
+        <AvisoDatosCaducados horas={stats.data?.datos_sembrados_hace_horas ?? null} />
+      </div>
+
       {bandeja.isPending ? (
         <Cargando />
       ) : bandeja.isError ? (

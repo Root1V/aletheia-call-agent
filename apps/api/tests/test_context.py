@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import time
+from datetime import UTC, datetime, timedelta
 
 import psycopg
 import pytest
@@ -197,3 +198,25 @@ def test_el_presupuesto_del_contexto_sale_de_la_configuracion() -> None:
     """
     assert Settings().budget_context_ms == PRESUPUESTO_PREPOP_MS
     assert Settings(budget_context_ms=42).budget_context_ms == 42
+
+
+async def test_los_eventos_del_escenario_caben_en_la_ventana(escenarios) -> None:
+    """Los datos de demostración caducan, y hay que notarlo antes que en una demo.
+
+    Los escenarios colocan sus eventos en relación al momento de la siembra, y
+    el contexto sólo mira las últimas 72 horas. Un evento demasiado antiguo deja
+    el panel VACÍO sin ningún error, que es la peor forma de fallar: parece que
+    el producto no funciona. El escenario insignia debe conservar margen
+    suficiente para aguantar un par de días.
+    """
+    sc = next(s for s in escenarios if s["scenario_id"] == "disputa_cargo_no_reconocido")
+    ctx = await context_builder.build("call-x", sc["customer_id"])
+
+    assert ctx.recent_account_events, (
+        "sin eventos recientes el contexto sale vacío: ¿hace falta `make seed`?"
+    )
+    antiguedad = datetime.now(UTC) - ctx.recent_account_events[0].occurred_at
+    margen = context_builder.VENTANA_RECIENTE - antiguedad
+    assert margen > timedelta(hours=24), (
+        f"sólo quedan {margen} de margen; el dataset caduca en menos de un día"
+    )

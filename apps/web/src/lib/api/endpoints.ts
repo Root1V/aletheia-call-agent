@@ -30,6 +30,8 @@ export interface Health {
 
 export interface Overview {
   llamadas_en_bandeja: number;
+  /** Antigüedad del dataset de demostración, en horas. */
+  datos_sembrados_hace_horas: number | null;
   clientes: number;
   transacciones: number;
   comercios: number;

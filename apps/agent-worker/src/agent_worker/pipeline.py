@@ -25,6 +25,7 @@ from cea_contracts import (
 )
 from cea_emotion import MotorDeEmocion, SeñalesConversacionales
 from cea_emotion.features import UMBRAL_VOZ_RMS
+from cea_redaction import redactar, redactar_parcial
 
 log = logging.getLogger("cea.worker")
 
@@ -177,15 +178,22 @@ class CallPipeline:
 
     async def _emitir(self, hip, ts_ms: int | None) -> None:
         if hip.is_final:
+            # La redacción ocurre AQUÍ, antes de publicar.
+            #
+            # No es un detalle de orden: una vez que el número entra al bus, a
+            # la base de datos o al historial de un proveedor de modelos,
+            # tacharlo después no lo des-publica.
+            redaccion = redactar(hip.text)
             await self._bus.publish(
                 AsrFinal(
                     call_id=self._call_id,
                     seq=self._siguiente_seq(),
                     speaker=hip.speaker,
                     turn_id=hip.turn_id,
-                    text=hip.text,
+                    text=redaccion.texto,
                     started_at_ms=hip.started_at_ms,
                     ended_at_ms=hip.ended_at_ms or hip.started_at_ms,
+                    redactions=redaccion.tipos,
                 )
             )
             # El fin de turno va como evento propio y no como una bandera del
@@ -202,13 +210,21 @@ class CallPipeline:
                 )
             )
         else:
+            # Un parcial con un dictado de cifras en curso se RETIENE.
+            #
+            # Publicarlo cifra a cifra deja pasar el número completo por el bus
+            # y por la pantalla antes de que ningún detector pueda reconocerlo:
+            # redactar sólo el turno final no evitaría esa fuga.
+            redaccion = redactar_parcial(hip.text)
+            if redaccion is None:
+                return
             await self._bus.publish(
                 AsrPartial(
                     call_id=self._call_id,
                     seq=self._siguiente_seq(),
                     speaker=hip.speaker,
                     turn_id=hip.turn_id,
-                    text=hip.text,
+                    text=redaccion.texto,
                     started_at_ms=hip.started_at_ms,
                 )
             )

@@ -115,7 +115,13 @@ def disputa_cargo_no_reconocido(gen: PeruBankGenerator, idx: int = 1) -> Scenari
     foco = gen.transaction(
         cuenta,
         comercio,
-        ahora - timedelta(days=2, hours=5),
+        # Veinte horas, no dos días.
+        #
+        # El contexto sólo mira las últimas 72 horas, así que un cargo colocado
+        # a 53 horas deja apenas 19 de margen: al día siguiente de sembrar, el
+        # panel de este escenario ya sale vacío. Con veinte horas el dataset
+        # aguanta dos días completos.
+        ahora - timedelta(hours=20),
         amount=Decimal("189.90"),
         device_label=f"{rng.choice(rd.DISPOSITIVOS)} de {cliente.full_name.split()[0]}",
         prior_90d=previas,

@@ -16,6 +16,14 @@ router = APIRouter(prefix="/api", tags=["portal"])
 
 class Overview(BaseModel):
     llamadas_en_bandeja: int
+    datos_sembrados_hace_horas: float | None = None
+    """Antigüedad del dataset de demostración.
+
+    Los escenarios colocan sus eventos en relación al momento de la siembra, y
+    el contexto sólo mira las últimas 72 horas. Pasado ese plazo el panel
+    aparece vacío SIN ningún error, que es la peor forma de fallar: parece que
+    el producto no funciona. Exponerlo permite avisar a tiempo.
+    """
     clientes: int
     transacciones: int
     comercios: int
@@ -47,7 +55,9 @@ async def overview(agent: CurrentAgent) -> Overview:
                 WHERE status NOT IN ('resuelto','cerrado')
                   AND due_at < now() + INTERVAL '7 days')                  AS casos_por_vencer,
               (SELECT count(*) FROM kb_documents)                          AS documentos_kb,
-              (SELECT count(*) FROM calls)                                 AS llamadas_atendidas
+              (SELECT count(*) FROM calls)                                 AS llamadas_atendidas,
+              (SELECT round(EXTRACT(EPOCH FROM (now() - seeded_at)) / 3600.0, 1)
+                 FROM seed_info)                        AS datos_sembrados_hace_horas
             """
         )
         row = await cur.fetchone()

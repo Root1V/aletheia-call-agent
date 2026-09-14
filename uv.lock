@@ -23,6 +23,7 @@ members = [
     "cea-bus",
     "cea-contracts",
     "cea-emotion",
+    "cea-redaction",
     "cea-synthetic",
     "customer-executive-assistant",
 ]
@@ -104,6 +105,7 @@ dependencies = [
     { name = "cea-bus", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "cea-contracts", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "cea-emotion", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "cea-redaction", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "numpy", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "pydantic-settings", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "pyyaml", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
@@ -115,6 +117,7 @@ requires-dist = [
     { name = "cea-bus", editable = "packages/eventbus" },
     { name = "cea-contracts", editable = "packages/contracts" },
     { name = "cea-emotion", editable = "services/emotion" },
+    { name = "cea-redaction", editable = "services/redaction" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "pydantic-settings", specifier = ">=2.6" },
     { name = "pyyaml", specifier = ">=6.0" },
@@ -220,6 +223,17 @@ requires-dist = [
     { name = "cea-contracts", editable = "packages/contracts" },
     { name = "numpy", specifier = ">=2.0" },
 ]
+
+[[package]]
+name = "cea-redaction"
+version = "0.1.0"
+source = { editable = "services/redaction" }
+dependencies = [
+    { name = "cea-contracts", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "cea-contracts", editable = "packages/contracts" }]
 
 [[package]]
 name = "cea-synthetic"
