@@ -22,6 +22,7 @@ members = [
     "cea-asr",
     "cea-bus",
     "cea-contracts",
+    "cea-copilot",
     "cea-emotion",
     "cea-llm",
     "cea-rag",
@@ -224,6 +225,23 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "pydantic", specifier = ">=2.9" }]
+
+[[package]]
+name = "cea-copilot"
+version = "0.1.0"
+source = { editable = "services/copilot" }
+dependencies = [
+    { name = "cea-contracts", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "cea-llm", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "cea-rag", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cea-contracts", editable = "packages/contracts" },
+    { name = "cea-llm", editable = "services/llm-gateway" },
+    { name = "cea-rag", editable = "services/rag" },
+]
 
 [[package]]
 name = "cea-emotion"
