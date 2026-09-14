@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card } from "@/components/ui/card";
 import { ContextTiming } from "@/features/call/ContextTiming";
+import { CopilotSuggestion } from "@/features/call/CopilotSuggestion";
 import { EmotionBars } from "@/features/call/EmotionBars";
 import { Full360 } from "@/features/call/Full360";
 import { LiveTranscript } from "@/features/call/LiveTranscript";
@@ -23,7 +24,13 @@ export function CallWorkspacePage() {
   const { callId = "" } = useParams();
   const navigate = useNavigate();
 
-  const { turnos, emocion, estado: estadoStream } = useCallStream(callId);
+  const {
+    turnos,
+    emocion,
+    estado: estadoStream,
+    sugerencia,
+    resolverSugerencia,
+  } = useCallStream(callId);
 
   const contexto = useQuery({
     queryKey: queryKeys.callContext(callId),
@@ -109,10 +116,14 @@ export function CallWorkspacePage() {
             </div>
 
             <div className="space-y-3">
-            <PendingPanel titulo="Copiloto" fase="Fase 4">
-              Respuesta sugerida adaptada al estado emocional, con cita obligatoria al conocimiento
-              del banco y verificación de toda cifra contra el tarifario estructurado.
-            </PendingPanel>
+            <CopilotSuggestion
+              /* Una sugerencia nueva remonta la tarjeta y descarta el borrador
+                 de la anterior, que ya no viene al caso. */
+              key={sugerencia?.id ?? "sin-sugerencia"}
+              callId={callId}
+              sugerencia={sugerencia}
+              onResolver={resolverSugerencia}
+            />
             <PendingPanel titulo="Clasificación del caso" fase="Fase 5">
               Propuesta de reclamo o requerimiento bajo la Ley 31763, con su justificación y la
               evidencia de la conversación, para que el ejecutivo confirme o corrija.

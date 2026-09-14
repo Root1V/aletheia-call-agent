@@ -9,6 +9,12 @@ Ese mismo registro es lo que permite reproducir una llamada completa para
 depurarla o para correr evaluaciones deterministas sobre tráfico real.
 """
 
-from .bus import EventBus, clave_de_stream
+from .bus import CLAVE_DIRECTORIO, EventBus, clave_de_contexto, clave_de_seq, clave_de_stream
 
-__all__ = ["EventBus", "clave_de_stream"]
+__all__ = [
+    "CLAVE_DIRECTORIO",
+    "EventBus",
+    "clave_de_contexto",
+    "clave_de_seq",
+    "clave_de_stream",
+]

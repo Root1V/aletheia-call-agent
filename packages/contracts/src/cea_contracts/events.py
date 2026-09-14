@@ -41,7 +41,16 @@ class BaseEvent(BaseModel):
     event_id: str = Field(default_factory=_new_id)
     call_id: str
     ts_ms: int = Field(default_factory=_now_ms, description="Epoch en milisegundos.")
-    seq: int = Field(default=0, description="Orden dentro de la llamada; permite replay exacto.")
+    seq: int = Field(
+        default=0,
+        description=(
+            "Orden dentro de la llamada; permite replay exacto. Lo asigna el BUS al "
+            "publicar, no quien construye el evento: una llamada tiene más de un "
+            "escritor —el worker transcribe mientras el orquestador sugiere— y dos "
+            "contadores en dos procesos producen el mismo número para eventos "
+            "distintos."
+        ),
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────────────

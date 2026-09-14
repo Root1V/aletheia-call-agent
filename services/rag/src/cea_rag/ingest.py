@@ -10,16 +10,10 @@ import psycopg
 from cea_llm import AxoniumProvider
 
 from .chunking import Trozo, leer_documento, trocear
+from .embeddings import MODELO_POR_DEFECTO, embeber
 from .hechos import extraer
 
 log = logging.getLogger("cea.rag")
-
-# Tamaño de lote para los embeddings.
-#
-# Medido contra la plataforma: una petición suelta cuesta unos 480 ms por el
-# arranque en frío, y en lote baja a 7 ms por texto. Indexar de uno en uno
-# multiplicaría por sesenta el tiempo de indexación sin ganar nada.
-LOTE = 32
 
 
 @dataclass(slots=True)
@@ -32,20 +26,11 @@ class Informe:
         return f"documentos={self.documentos} trozos={self.trozos} hechos={self.hechos}"
 
 
-async def _embeber(proveedor: AxoniumProvider, textos: list[str], modelo: str) -> list[list[float]]:
-    cliente = proveedor._construir()  # noqa: SLF001 - el SDK expone embeddings aparte
-    vectores: list[list[float]] = []
-    for i in range(0, len(textos), LOTE):
-        r = await cliente.embeddings.create(model=modelo, input=textos[i : i + LOTE])
-        vectores.extend(d.embedding for d in r.data)
-    return vectores
-
-
 async def indexar(
     directorio: Path,
     dsn: str,
     *,
-    modelo_embedding: str = "qwen3-embedding",
+    modelo_embedding: str = MODELO_POR_DEFECTO,
     proveedor: AxoniumProvider | None = None,
 ) -> Informe:
     """Lee, trocea, embebe e inserta la base de conocimiento.
@@ -74,7 +59,7 @@ async def indexar(
             todos_trozos.extend(trocear(doc))
             todos_hechos.extend(extraer(doc.document_id, doc.cuerpo))
 
-        vectores = await _embeber(proveedor, [t.contenido for t in todos_trozos], modelo_embedding)
+        vectores = await embeber(proveedor, [t.contenido for t in todos_trozos], modelo_embedding)
 
         with psycopg.connect(dsn) as conn, conn.cursor() as cur:
             cur.execute("TRUNCATE kb_facts, kb_chunks, kb_documents CASCADE")

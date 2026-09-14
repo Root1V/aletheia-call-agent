@@ -67,6 +67,7 @@ async def generar(
     datos_de_la_llamada: str,
     consulta_kb: str | None = None,
     vector: list[float] | None = None,
+    tono: str | None = None,
 ) -> Sugerencia:
     """Recupera, genera y verifica.
 
@@ -86,6 +87,7 @@ async def generar(
         turno_del_cliente=turno_del_cliente,
         datos_de_la_llamada=datos_de_la_llamada,
         pasajes=pasajes,
+        tono=tono,
     )
 
     ttft = 0.0

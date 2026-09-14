@@ -55,7 +55,8 @@ make seed      # dataset sintético es-PE, reproducible por semilla
 make admin USER=carlos NAME="Carlos Ruiz"   # primer usuario; imprime la contraseña
 make models    # modelos de voz (muestra la licencia de cada uno)
 make audio     # renderiza los guiones a audio con `say` (macOS)
-make dev       # API en :8000 y portal en :5180
+make kb        # indexa la base de conocimiento (requiere credenciales de la plataforma)
+make dev       # API en :8000, portal en :5180 y copiloto
 ```
 
 Abrir <http://localhost:5180> e iniciar sesión. La bandeja muestra cinco
@@ -117,7 +118,7 @@ más rápida de perder la confianza.
 | 2 | Contexto de llamada, enriquecimiento, predicción de intención | ✅ |
 | 1 | Transcripción en vivo (ASR en streaming + bus + WebSocket) | ✅ parcial |
 | 3 | Emoción del cliente en tiempo real | ✅ parcial |
-| 4 | RAG y sugerencia generativa con citación obligatoria | pendiente |
+| 4 | RAG y sugerencia generativa con citación obligatoria | ✅ |
 | 5 | Clasificación reclamo/requerimiento (Ley 31763) | pendiente |
 | 6 | Resumen y tipificación post-llamada | pendiente |
 | 7 | Endurecimiento: PII, auditoría, RBAC, observabilidad | ✅ parcial (PII) |
@@ -125,6 +126,37 @@ más rápida de perder la confianza.
 La Fase 1 está completa por el camino de reproducción (`FileReplayAdapter`), que
 es el que sostiene los tests y la evaluación. Falta el adaptador de LiveKit para
 audio de micrófono en vivo; el pipeline no cambia, sólo la fuente de las tramas.
+
+### La sugerencia, medida
+
+Sobre el escenario de disputa, con la llamada transcribiéndose en vivo:
+
+| | |
+|---|---|
+| Embedding de la consulta | 25 ms |
+| Búsqueda híbrida (30 candidatos → 5 pasajes) | 5 ms |
+| Generación con `qwen3-8b-q6` sin razonamiento | 1338 ms p50 |
+| **Total, sugerencia verificada** | **1369 ms p50** · presupuesto 1500 ms |
+
+Dos cosas que conviene declarar en vez de esconder en el p50:
+
+**El primer token llega a los ~100 ms, pero la tarjeta no se pinta hasta el
+final.** Es deliberado. La verificación de cifras se hace sobre el texto
+completo, y una comisión equivocada que parpadea medio segundo en pantalla ya se
+la puede haber leído el ejecutivo al cliente: entonces el guardarraíl no sirvió
+de nada. Se gana latencia percibida anunciando la tarjeta —`suggestion.started`
+sale antes de recuperar nada—, no arriesgando el número.
+
+**En una sola máquina, el reconocimiento de voz y el modelo se pelean por la
+CPU.** Medido: sin carga, el primer token sale a 100-106 ms de forma estable;
+con una llamada transcribiéndose en paralelo en la misma Mac, dos de cada cinco
+generaciones saltan a 1100-1900 ms y el total se va a ~2000 ms, por encima del
+presupuesto. No es el modelo ni el tamaño del prompt —1666 tokens de prompt dan
+el mismo TTFT con y sin pausas de 15 s entre peticiones—: es que sherpa-onnx
+transcribiendo dos hablantes en tiempo real y el servidor de inferencia comparten
+los mismos núcleos. En un despliegue real van en hosts distintos y el modelo en
+GPU, así que **el número de esta máquina no se puede presentar como el de
+producción, ni bueno ni malo**.
 
 **Acciones ejecutables (RF-16) están fuera del alcance actual, por decisión.**
 Conviene tenerlo presente al medir: el sistema ataca los segmentos del 45%, 54%
@@ -149,6 +181,20 @@ quién.** La elegibilidad es un motor de reglas determinista; las cifras citable
 viven en una tabla estructurada (`kb_facts`) contra la que se verifica toda tasa
 o comisión que el modelo emita. Ese control, y no el prompt, es lo que evita el
 incidente regulatorio.
+
+**El copiloto se calla más de lo que habla.** Sugiere sólo ante un turno del
+cliente de al menos cinco palabras, con seis segundos de enfriamiento entre
+tarjetas, y un turno nuevo cancela la generación anterior en vuelo. No es para
+ahorrar en el modelo: es porque una tarjeta nueva mientras el ejecutivo lee la
+anterior hace que deje de leerlas, y la sobrecarga cognitiva —no la calidad del
+modelo— es la causa número uno de abandono de estas herramientas. Cuando el
+copiloto no sugiere, el log dice por qué: "no sugirió" sin causa es
+indistinguible de un fallo.
+
+**Una sugerencia bloqueada se muestra igual, con su motivo.** Un hueco en
+blanco es indistinguible de un fallo y deja al ejecutivo esperando. Decir "me
+callé porque sólo pude respaldar el 40% de lo que iba a decir" mantiene la
+confianza; callarse en silencio la destruye.
 
 **La evidencia exacta manda sobre la circunstancial.** Dos cargos del mismo
 monto en el mismo comercio con minutos de diferencia no son indicio de
@@ -246,6 +292,9 @@ services/
   emotion/             estado emocional a partir de prosodia y conversación
   redaction/           redacción de PII, incluidos números dictados en voz alta
   llm-gateway/         acceso a modelos vía el SDK de Axonium
+  rag/                 base de conocimiento: troceado, búsqueda híbrida, cifras citables
+  copilot/             la frase que se dice en voz alta: prompt, tono y guardarraíles
+  orchestrator/        qué sugerir y cuándo, sobre la llamada en vivo
 evals/
   scenarios/           guiones reproducibles
   runners/             evaluación de WER y latencia

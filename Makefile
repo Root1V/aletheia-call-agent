@@ -64,8 +64,11 @@ api:  ## Arranca la API en :8000
 web:  ## Arranca el portal en :5180
 	cd apps/web && npm run dev
 
-dev:  ## Arranca API y portal a la vez
-	@$(MAKE) -j2 api web
+copilot:  ## Arranca el orquestador: sugerencias sobre las llamadas abiertas
+	uv run cea-orchestrator
+
+dev:  ## Arranca API, portal y copiloto a la vez
+	@$(MAKE) -j3 api web copilot
 
 test:  ## Ejecuta la suite completa
 	uv run pytest -q

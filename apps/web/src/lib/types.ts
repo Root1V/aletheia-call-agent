@@ -212,6 +212,39 @@ export interface CallEndedEvent {
   reason: string;
 }
 
+export interface Citation {
+  chunk_id: string;
+  document: string;
+  section: string | null;
+  snippet: string;
+  score: number | null;
+}
+
+export interface SuggestionStartedEvent {
+  type: "suggestion.started";
+  call_id: string;
+  seq: number;
+  ts_ms: number;
+  suggestion_id: string;
+  trigger_turn_id: string;
+  speculative: boolean;
+}
+
+export interface SuggestionCompletedEvent {
+  type: "suggestion.completed";
+  call_id: string;
+  seq: number;
+  ts_ms: number;
+  suggestion_id: string;
+  text: string;
+  citations: Citation[];
+  emotion_adapted_to: EmotionLabel | null;
+  /** Un guardarraíl la detuvo: sin respaldo, cifra no verificada o frase prohibida. */
+  blocked: boolean;
+  blocked_reason: string | null;
+  latency_ms: number | null;
+}
+
 export interface StreamControlEvent {
   type: "stream.ready" | "stream.heartbeat";
   call_id?: string;
@@ -223,6 +256,8 @@ export type EventoConocido =
   | EmotionFrameEvent
   | CallStartedEvent
   | CallEndedEvent
+  | SuggestionStartedEvent
+  | SuggestionCompletedEvent
   | StreamControlEvent;
 
 /**
@@ -280,4 +315,25 @@ export interface EstadoEmocional {
   confidence: number;
   contributions: Record<string, number>;
   tsMs: number;
+}
+
+/**
+ * La sugerencia activa del copiloto.
+ *
+ * Hay como mucho una a la vez, y es una decisión de producto, no una
+ * limitación: una tarjeta nueva mientras el ejecutivo lee la anterior hace que
+ * deje de leerlas, y una herramienta que se deja de leer está desinstalada
+ * aunque siga corriendo.
+ */
+export interface SugerenciaViva {
+  id: string;
+  /** Mientras se redacta y se verifica no hay texto que mostrar. */
+  estado: "redactando" | "lista" | "bloqueada";
+  texto: string;
+  citas: Citation[];
+  emocion: EmotionLabel | null;
+  motivoDeBloqueo: string | null;
+  latenciaMs: number | null;
+  /** Qué hizo el ejecutivo. Se guarda para no volver a mostrarla tras descartarla. */
+  resuelta: boolean;
 }

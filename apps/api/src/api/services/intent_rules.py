@@ -19,9 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from cea_contracts import CallIntent, IntentPrediction
-
-from ..util.timefmt import fmt_fecha, fmt_fecha_hora
+from cea_contracts import CallIntent, IntentPrediction, fmt_fecha, fmt_fecha_hora
 
 
 @dataclass(slots=True)

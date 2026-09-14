@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import time
 import uuid
+from typing import Literal
 
-from cea_contracts import CallContext
+from cea_bus import EventBus
+from cea_contracts import CallContext, ContextEnriched, SuggestionFeedback
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
@@ -13,6 +16,8 @@ from ..auth import CurrentAgent
 from ..config import get_settings
 from ..db import cursor
 from ..services import context_builder
+
+log = logging.getLogger("cea.api")
 
 router = APIRouter(prefix="/api/calls", tags=["llamadas"])
 
@@ -97,11 +102,37 @@ async def call_context(call_id: str, agent: CurrentAgent) -> ContextResponse:
     contexto = await context_builder.build(call_id, fila["customer_id"])
     transcurrido = (time.perf_counter() - inicio) * 1000
 
+    # El contexto también va al bus.
+    #
+    # El portal ya lo tiene en esta respuesta; quien lo necesita es el
+    # orquestador, que redacta las sugerencias y no puede inventarse los hechos
+    # de la llamada. Publicarlo en lugar de que el orquestador vuelva a
+    # calcularlo evita la peor variante del problema: dos implementaciones del
+    # pre-pop que divergen, y un copiloto que afirma algo distinto de lo que el
+    # ejecutivo tiene en pantalla.
+    await _publicar_contexto(contexto)
+
     return ContextResponse(
         context=contexto,
         build_ms=round(transcurrido, 1),
         budget_ms=get_settings().budget_context_ms,
     )
+
+
+async def _publicar_contexto(contexto: CallContext) -> None:
+    """Publica el contexto, y no deja que un fallo del bus tumbe el pre-pop.
+
+    El pre-pop tiene presupuesto de 150 ms y es lo que el ejecutivo ve antes de
+    descolgar. Si Redis no está, el portal debe pintarse igual: se pierde la
+    sugerencia, no la llamada.
+    """
+    bus = EventBus.desde_url(get_settings().redis_url)
+    try:
+        await bus.guardar_contexto(ContextEnriched(call_id=contexto.call_id, context=contexto))
+    except Exception:  # noqa: BLE001
+        log.warning("No se pudo publicar el contexto de %s", contexto.call_id, exc_info=True)
+    finally:
+        await bus.aclose()
 
 
 class AnswerRequest(BaseModel):
@@ -138,3 +169,50 @@ async def answer(call_id: str, body: AnswerRequest, agent: CurrentAgent) -> dict
         creada = await cur.fetchone()
 
     return {"call_id": call_id, "room": creada["room"], "agent_id": agent.agent_id}
+
+
+class FeedbackRequest(BaseModel):
+    action: Literal["used", "edited", "dismissed"]
+    final_text: str | None = None
+    """Lo que el ejecutivo dijo realmente, si editó la sugerencia.
+
+    La distancia entre esto y el texto sugerido es la métrica más informativa
+    del copiloto: una aceptación con tres palabras cambiadas y una reescritura
+    completa cuentan las dos como "editada", y sólo se distinguen mirando el
+    texto.
+    """
+
+
+@router.post(
+    "/{call_id}/suggestions/{suggestion_id}/feedback", status_code=status.HTTP_202_ACCEPTED
+)
+async def suggestion_feedback(
+    call_id: str,
+    suggestion_id: str,
+    body: FeedbackRequest,
+    agent: CurrentAgent,
+) -> dict:
+    """Qué hizo el ejecutivo con la sugerencia.
+
+    Es la señal de calidad más valiosa que produce el sistema y la única que no
+    se puede recuperar después: ningún análisis posterior de la grabación
+    distingue una sugerencia que el ejecutivo usó de una que ignoró y luego dijo
+    algo parecido por su cuenta.
+
+    Va al bus y no a una tabla propia para que viaje en el mismo registro
+    reproducible que el resto de la llamada. La persistencia auditable de todo
+    el stream es trabajo de la Fase 7.
+    """
+    bus = EventBus.desde_url(get_settings().redis_url)
+    try:
+        await bus.publish(
+            SuggestionFeedback(
+                call_id=call_id,
+                suggestion_id=suggestion_id,
+                action=body.action,
+                final_text=body.final_text,
+            )
+        )
+    finally:
+        await bus.aclose()
+    return {"ok": True}

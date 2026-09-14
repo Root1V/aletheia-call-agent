@@ -35,6 +35,12 @@ está ahí, no lo menciones.
 - No inventes cifras ni las combines entre sí: no sumes, no promedies, no \
 calcules.
 - No prometas aprobaciones, devoluciones ni resultados de un reclamo.
+- No le des la razón al cliente sobre si un cargo es correcto o indebido: eso \
+todavía no está determinado. Puedes reconocer su molestia, nunca su conclusión.
+- Si el cliente no reconoce un cargo y el material identifica el comercio real, \
+DILO primero: el nombre del comercio, la fecha, y cuántas veces compró ahí \
+antes. Es lo que resuelve la mayoría de estos casos. Menciona también cómo \
+aparece el cargo en su estado de cuenta si es distinto del nombre del comercio.
 - Si el material no alcanza para responder, di que se va a verificar.\
 """
 
@@ -46,6 +52,8 @@ class Contexto:
     turno_del_cliente: str
     datos_de_la_llamada: str
     pasajes: tuple[Pasaje, ...]
+    tono: str | None = None
+    """Cómo decirlo, según el estado emocional del cliente. Nunca qué decir."""
 
     def material(self) -> str:
         """El material tal como lo ve el modelo.
@@ -61,8 +69,11 @@ class Contexto:
 
 
 def construir(ctx: Contexto) -> list[Mensaje]:
+    sistema = (
+        f"{SISTEMA}\n\nAjuste de tono para esta respuesta:\n- {ctx.tono}" if ctx.tono else SISTEMA
+    )
     return [
-        Mensaje("system", SISTEMA),
+        Mensaje("system", sistema),
         Mensaje(
             "user",
             f"{ctx.material()}\n\n"

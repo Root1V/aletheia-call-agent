@@ -9,6 +9,9 @@ import type {
   CallStartedEvent,
   EmotionFrameEvent,
   EstadoEmocional,
+  SugerenciaViva,
+  SuggestionCompletedEvent,
+  SuggestionStartedEvent,
   Turno,
 } from "@/lib/types";
 
@@ -27,6 +30,7 @@ const RECONEXION_MS = [500, 1000, 2000, 5000, 10000];
 export function useCallStream(callId: string | undefined) {
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [emocion, setEmocion] = useState<EstadoEmocional | null>(null);
+  const [sugerencia, setSugerencia] = useState<SugerenciaViva | null>(null);
   const [estado, setEstado] = useState<Estado>("conectando");
   const wsRef = useRef<WebSocket | null>(null);
   const intentoRef = useRef(0);
@@ -46,6 +50,7 @@ export function useCallStream(callId: string | undefined) {
     if (es<CallStartedEvent>(ev, "call.started")) {
       setTurnos([]);
       setEmocion(null);
+      setSugerencia(null);
       // El estado sólo se toca si ya estábamos en vivo: entonces este inicio
       // es una llamada nueva sobre la misma conexión y hay que salir de
       // "terminada". Durante la reconstrucción del historial se deja como
@@ -87,7 +92,51 @@ export function useCallStream(callId: string | undefined) {
       });
       return;
     }
+    if (es<SuggestionStartedEvent>(ev, "suggestion.started")) {
+      const e = ev;
+      // Aparece antes de haber una sola palabra. El primer token llega a los
+      // ~90 ms pero la verificación de cifras necesita el texto completo, así
+      // que la tarjeta se anuncia enseguida y el contenido llega después.
+      setSugerencia({
+        id: e.suggestion_id,
+        estado: "redactando",
+        texto: "",
+        citas: [],
+        emocion: null,
+        motivoDeBloqueo: null,
+        latenciaMs: null,
+        resuelta: false,
+      });
+      return;
+    }
+
+    if (es<SuggestionCompletedEvent>(ev, "suggestion.completed")) {
+      const e = ev;
+      setSugerencia((previa) => {
+        // Un cierre que no corresponde a la tarjeta en pantalla es el de una
+        // sugerencia que un turno posterior dejó obsoleta. Aplicarlo borraría
+        // la que el ejecutivo está leyendo ahora mismo.
+        if (previa && previa.id !== e.suggestion_id) return previa;
+        return {
+          id: e.suggestion_id,
+          estado: e.blocked ? "bloqueada" : "lista",
+          texto: e.text,
+          citas: e.citations ?? [],
+          emocion: e.emotion_adapted_to,
+          motivoDeBloqueo: e.blocked_reason,
+          latenciaMs: e.latency_ms,
+          resuelta: false,
+        };
+      });
+      return;
+    }
+
     if (ev.type === "call.ended") setEstado("terminada");
+  }, []);
+
+  /** Marca la sugerencia como atendida para que deje de ocupar la pantalla. */
+  const resolverSugerencia = useCallback((id: string) => {
+    setSugerencia((previa) => (previa && previa.id === id ? { ...previa, resuelta: true } : previa));
   }, []);
 
   useEffect(() => {
@@ -149,8 +198,9 @@ export function useCallStream(callId: string | undefined) {
       wsRef.current?.close();
       setTurnos([]);
       setEmocion(null);
+      setSugerencia(null);
     };
   }, [callId, aplicar]);
 
-  return { turnos, emocion, estado };
+  return { turnos, emocion, estado, sugerencia, resolverSugerencia };
 }

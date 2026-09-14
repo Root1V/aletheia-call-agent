@@ -175,3 +175,111 @@ async def test_reset_deja_la_llamada_en_limpio(bus, call_id) -> None:
     await bus.reset(call_id)
 
     assert await bus.history(call_id) == []
+
+
+async def test_dos_escritores_no_repiten_el_numero_de_secuencia(bus, call_id) -> None:
+    """Una llamada tiene más de un escritor, y el `seq` tiene que seguir sirviendo.
+
+    El worker transcribe mientras el orquestador publica sugerencias sobre la
+    misma llamada. Cuando cada proceso llevaba su propio contador, los dos
+    numeraban desde el mismo sitio y el replay dejaba de ser reproducible: dos
+    eventos distintos con el mismo `seq`, y el portal ordenándolos a capricho.
+
+    El contador vive en Redis y es atómico, así que da igual cuántos procesos
+    publiquen a la vez.
+    """
+    otro = EventBus.desde_url(REDIS_URL, bloqueo_ms=500)
+    try:
+
+        async def publicar(b: EventBus, veces: int) -> None:
+            for _ in range(veces):
+                await b.publish(
+                    AsrPartial(
+                        call_id=call_id,
+                        # Deliberadamente el mismo seq en todos: lo que el
+                        # publicador diga se ignora.
+                        seq=1,
+                        speaker=Speaker.CUSTOMER,
+                        turn_id="t1",
+                        text="hipótesis",
+                        started_at_ms=0,
+                    )
+                )
+
+        await asyncio.gather(publicar(bus, 25), publicar(otro, 25))
+    finally:
+        await otro.aclose()
+
+    secuencias = [e.seq for _i, e in await bus.history(call_id)]
+
+    assert len(secuencias) == 50
+    assert len(set(secuencias)) == 50, "hay números de secuencia repetidos"
+    assert secuencias == sorted(secuencias), "el orden del stream no sigue al del seq"
+
+
+async def test_el_reset_devuelve_la_numeracion_al_principio(bus, call_id) -> None:
+    """Reproducir un escenario dos veces tiene que numerar igual las dos veces.
+
+    Si el contador sobreviviera al reset, la segunda reproducción del mismo
+    guion produciría eventos idénticos con `seq` distinto, y las comparaciones
+    de las evaluaciones deterministas fallarían sin que nada estuviera mal.
+    """
+    await bus.publish(CallEnded(call_id=call_id, duration_ms=1))
+    await bus.publish(CallEnded(call_id=call_id, duration_ms=2))
+    await bus.reset(call_id)
+    await bus.publish(CallEnded(call_id=call_id, duration_ms=3))
+
+    _ident, evento = (await bus.history(call_id))[0]
+    assert evento.seq == 1
+
+
+async def test_el_contexto_sobrevive_al_reset(bus, call_id) -> None:
+    """El pre-pop se calcula ANTES de descolgar y el worker vacía el stream al empezar.
+
+    Guardado sólo como evento, el contexto se borraba justo cuando el copiloto
+    iba a necesitarlo, y las sugerencias salían sin saber de qué cargo se estaba
+    hablando. El síntoma no era un error: eran sugerencias genéricas.
+    """
+    from cea_contracts import CallIntent, ContextEnriched, IntentPrediction
+
+    contexto = _contexto_minimo(call_id)
+    await bus.guardar_contexto(ContextEnriched(call_id=call_id, context=contexto))
+
+    # También llegó al stream, que es como lo recibe el portal en vivo.
+    assert any(e.type == "context.enriched" for _i, e in await bus.history(call_id))
+
+    await bus.reset(call_id)
+
+    assert await bus.history(call_id) == []
+    guardado = await bus.contexto(call_id)
+    assert guardado is not None
+    assert guardado.context.intent.intent is CallIntent.DISPUTA_CARGO_NO_RECONOCIDO
+    assert isinstance(guardado.context.intent, IntentPrediction)
+
+
+def _contexto_minimo(call_id: str):
+    from datetime import UTC, date, datetime
+
+    from cea_contracts import (
+        AuthLevel,
+        CallContext,
+        CallIntent,
+        Customer,
+        IntentPrediction,
+        TrustState,
+    )
+
+    return CallContext(
+        call_id=call_id,
+        customer=Customer(
+            customer_id="CUS000001",
+            full_name="Magaly Bardales",
+            document_type="DNI",
+            document_masked="***8745",
+            segment="preferente",
+            customer_since=date(2010, 1, 1),
+        ),
+        trust=TrustState(level=AuthLevel.VERIFICADO),
+        intent=IntentPrediction(intent=CallIntent.DISPUTA_CARGO_NO_RECONOCIDO, confidence=0.9),
+        generated_at=datetime.now(UTC),
+    )

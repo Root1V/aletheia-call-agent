@@ -89,6 +89,19 @@ export const endpoints = {
 
   evaluationScenarios: () =>
     api.get<ScenarioRow[]>("/api/evaluation/scenarios").then((r) => r.data),
+
+  suggestionFeedback: (
+    callId: string,
+    suggestionId: string,
+    action: "used" | "edited" | "dismissed",
+    finalText?: string,
+  ) =>
+    api
+      .post(`/api/calls/${callId}/suggestions/${suggestionId}/feedback`, {
+        action,
+        final_text: finalText ?? null,
+      })
+      .then((r) => r.data),
 };
 
 /**

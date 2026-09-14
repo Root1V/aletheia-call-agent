@@ -80,7 +80,6 @@ class CallPipeline:
         self._ingress = ingress
         self._scenario_id = scenario_id
 
-        self._seq = 0
         self._inicio = 0.0
         objetivo = int(asr.sample_rate * BLOQUE_MS / 1000)
         self._acum = {s: _Acumulador(objetivo) for s in (Speaker.CUSTOMER, Speaker.AGENT)}
@@ -91,10 +90,6 @@ class CallPipeline:
         # hablando. Se guarda por hablante y se consulta al llegar el bloque
         # contrario.
         self._hablando = {Speaker.CUSTOMER: False, Speaker.AGENT: False}
-
-    def _siguiente_seq(self) -> int:
-        self._seq += 1
-        return self._seq
 
     async def start(self, room: str, *, limpiar_historial: bool = True) -> None:
         # Empezar en limpio. El identificador de llamada de un escenario es
@@ -110,7 +105,6 @@ class CallPipeline:
         await self._bus.publish(
             CallStarted(
                 call_id=self._call_id,
-                seq=self._siguiente_seq(),
                 customer_id=self._customer_id,
                 agent_id=self._agent_id,
                 room=room,
@@ -140,7 +134,7 @@ class CallPipeline:
                 self._call_id, bloque, conversacional=self._conversacional
             )
             if fotograma is not None:
-                await self._bus.publish(fotograma.model_copy(update={"seq": self._siguiente_seq()}))
+                await self._bus.publish(fotograma)
 
     def _actualizar_solapamiento(self, speaker: Speaker, bloque) -> None:
         """Cuenta las veces que el cliente arranca sobre el ejecutivo.
@@ -170,7 +164,6 @@ class CallPipeline:
         await self._bus.publish(
             CallEnded(
                 call_id=self._call_id,
-                seq=self._siguiente_seq(),
                 duration_ms=int((time.perf_counter() - self._inicio) * 1000),
                 reason=reason,
             )
@@ -187,7 +180,6 @@ class CallPipeline:
             await self._bus.publish(
                 AsrFinal(
                     call_id=self._call_id,
-                    seq=self._siguiente_seq(),
                     speaker=hip.speaker,
                     turn_id=hip.turn_id,
                     text=redaccion.texto,
@@ -203,7 +195,6 @@ class CallPipeline:
             await self._bus.publish(
                 TurnEnded(
                     call_id=self._call_id,
-                    seq=self._siguiente_seq(),
                     speaker=hip.speaker,
                     turn_id=hip.turn_id,
                     predicted=False,
@@ -221,7 +212,6 @@ class CallPipeline:
             await self._bus.publish(
                 AsrPartial(
                     call_id=self._call_id,
-                    seq=self._siguiente_seq(),
                     speaker=hip.speaker,
                     turn_id=hip.turn_id,
                     text=redaccion.texto,

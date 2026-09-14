@@ -19,6 +19,7 @@ members = [
     "services/llm-gateway",
     "services/rag",
     "services/copilot",
+    "services/orchestrator",
 ]
 
 [tool.uv]
@@ -57,6 +58,7 @@ cea-redaction = { workspace = true }
 cea-llm = { workspace = true }
 cea-rag = { workspace = true }
 cea-copilot = { workspace = true }
+cea-orchestrator = { workspace = true }
 cea-agent-worker = { workspace = true }
 
 [dependency-groups]
