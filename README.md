@@ -129,34 +129,63 @@ audio de micrófono en vivo; el pipeline no cambia, sólo la fuente de las trama
 
 ### La sugerencia, medida
 
-Sobre el escenario de disputa, con la llamada transcribiéndose en vivo:
+`make eval-rag` evalúa la recuperación con trece consultas escritas **como habla
+un cliente por teléfono**, no como está redactado el documento. Esa distancia es
+el problema real: el tarifario dice "comisión por disposición de efectivo" y el
+cliente dice "sacar plata del cajero". Un conjunto construido parafraseando el
+propio documento mide lo fácil y sale siempre bien.
 
-| | |
+| | acierto@1 | cobertura@5 | coste |
+|---|---|---|---|
+| RRF solo (léxica + densa) | 54% | 92% | 3 ms |
+| RRF + `qwen3-reranker` | **85%** | **100%** | +278 ms |
+
+El acierto en primera posición es lo que importa: con cinco pasajes en el
+prompt, el que encabeza es el que el modelo cita. El reordenador cuesta ~26 ms
+por pasaje, de forma lineal y estable entre 3 y 39 documentos.
+
+Cuatro cosas que conviene declarar en vez de esconderlas en el p50:
+
+**El primer token es caro, y una medición anterior decía lo contrario.**
+Repitiendo el MISMO prompt el primer token sale a 100 ms, y sobre eso llegué a
+escribir aquí que la latencia era plana con el número de pasajes. Era falso: lo
+que medía era la caché de prefijo del despliegue. Con el prompt real, en el que
+los pasajes cambian en cada sugerencia:
+
+| Qué cambia entre sugerencias | primer token |
 |---|---|
-| Embedding de la consulta | 25 ms |
-| Búsqueda híbrida (30 candidatos → 5 pasajes) | 5 ms |
-| Generación con `qwen3-8b-q6` sin razonamiento | 1338 ms p50 |
-| **Total, sugerencia verificada** | **1369 ms p50** · presupuesto 1500 ms |
+| nada (caché completa) | 136 ms |
+| sólo el turno del cliente, al final | 187 ms |
+| **los pasajes — el caso real** | **1502 ms** |
+| el contexto de la llamada, al principio | 3850 ms |
 
-Dos cosas que conviene declarar en vez de esconder en el p50:
+De ahí que el orden del prompt no sea cosmético: lo estable —sistema y datos de
+la llamada— va primero y lo volátil al final, para que la caché cubra todo lo
+que pueda. Cada pasaje añade ~210 ms de prefill, así que el número de pasajes es
+una palanca de latencia real (1 pasaje 325 ms · 3 pasajes 729 ms · 5 pasajes
+1166 ms). Se mantienen cinco porque con el reordenador la cobertura sube al 100%,
+y un pasaje que falta no da una respuesta mala sino ninguna.
 
-**El primer token llega a los ~100 ms, pero la tarjeta no se pinta hasta el
-final.** Es deliberado. La verificación de cifras se hace sobre el texto
-completo, y una comisión equivocada que parpadea medio segundo en pantalla ya se
-la puede haber leído el ejecutivo al cliente: entonces el guardarraíl no sirvió
-de nada. Se gana latencia percibida anunciando la tarjeta —`suggestion.started`
-sale antes de recuperar nada—, no arriesgando el número.
+**La tarjeta no se pinta hasta el final**, aunque el primer token llegue antes.
+La verificación de cifras se hace sobre el texto completo, y una comisión
+equivocada que parpadea medio segundo en pantalla ya se la puede haber leído el
+ejecutivo al cliente: entonces el guardarraíl no sirvió de nada. Se gana latencia
+percibida anunciando la tarjeta —`suggestion.started` sale antes de recuperar
+nada—, no arriesgando el número.
 
 **En una sola máquina, el reconocimiento de voz y el modelo se pelean por la
-CPU.** Medido: sin carga, el primer token sale a 100-106 ms de forma estable;
-con una llamada transcribiéndose en paralelo en la misma Mac, dos de cada cinco
-generaciones saltan a 1100-1900 ms y el total se va a ~2000 ms, por encima del
-presupuesto. No es el modelo ni el tamaño del prompt —1666 tokens de prompt dan
-el mismo TTFT con y sin pausas de 15 s entre peticiones—: es que sherpa-onnx
-transcribiendo dos hablantes en tiempo real y el servidor de inferencia comparten
-los mismos núcleos. En un despliegue real van en hosts distintos y el modelo en
-GPU, así que **el número de esta máquina no se puede presentar como el de
-producción, ni bueno ni malo**.
+CPU.** Sin carga el primer token es estable; con una llamada transcribiéndose en
+paralelo en la misma Mac, dos de cada cinco generaciones saltan a 1100-1900 ms.
+sherpa-onnx transcribiendo dos hablantes en tiempo real y el servidor de
+inferencia comparten los mismos núcleos. En un despliegue real van en hosts
+distintos y el modelo en GPU, así que **el número de esta máquina no se puede
+presentar como el de producción, ni bueno ni malo**.
+
+**Hoy la sugerencia verificada sale en 1700-2100 ms, por encima del presupuesto
+de 1500 ms.** No se ajusta el presupuesto para que cuadre: el 1.5 s viene de la
+evidencia sobre cuándo el ejecutivo deja de confiar en la herramienta, no de lo
+que esta máquina consigue. Las palancas medidas son el número de pasajes, la
+profundidad del reordenador y separar el ASR del modelo.
 
 **Acciones ejecutables (RF-16) están fuera del alcance actual, por decisión.**
 Conviene tenerlo presente al medir: el sistema ataca los segmentos del 45%, 54%
@@ -190,6 +219,15 @@ anterior hace que deje de leerlas, y la sobrecarga cognitiva —no la calidad de
 modelo— es la causa número uno de abandono de estas herramientas. Cuando el
 copiloto no sugiere, el log dice por qué: "no sugirió" sin causa es
 indistinguible de un fallo.
+
+**Una cita tiene que respaldar la frase, no acompañarla.** Citar el primer
+pasaje recuperado es lo cómodo, y produce referencias falsas: en el flujo de
+reclamos la mayoría de las frases se construyen enteras con los datos de la
+llamada —el comercio real, la fecha, las compras previas— y no deben nada a
+ningún documento. Se cita sólo el pasaje que aportó términos que la frase no
+podía sacar del contexto de la llamada; cuando no hay ninguno, la tarjeta dice
+"según los datos de esta llamada, sin respaldo en la base de conocimiento". Es
+el ejecutivo quien responde si el cliente pregunta de dónde sale el dato.
 
 **Una sugerencia bloqueada se muestra igual, con su motivo.** Un hueco en
 blanco es indistinguible de un fallo y deja al ejecutivo esperando. Decir "me
@@ -262,7 +300,7 @@ hábiles de la Ley 31763 se cuentan sobre el calendario local.
 pgvector · python-jose + passlib[bcrypt] · pydantic-settings · uv.
 
 **Voz e inferencia** — sherpa-onnx (ASR en streaming) · `axonium` para los
-modelos de la plataforma Prometheus, detrás de un protocolo propio para que el
+modelos de la plataforma Prometheus (chat, embeddings y `rerank`), detrás de un protocolo propio para que el
 copiloto, la clasificación de reclamos y el resumen no conozcan al proveedor.
 
 **Frontend** — React 19 + Vite · TypeScript · Tailwind CSS v4 con el patrón
@@ -315,6 +353,7 @@ desde su log de eventos para evaluaciones deterministas.
 
 ```bash
 make test     # suite completa
+make eval-rag # recuperación, con y sin reordenador
 make lint     # ruff + tsc
 make fmt      # formatea
 make reset    # recrea la base desde cero

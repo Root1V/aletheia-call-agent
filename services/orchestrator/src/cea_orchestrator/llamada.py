@@ -24,7 +24,7 @@ from cea_contracts import (
 )
 from cea_copilot import generar, instruccion, resumir
 from cea_llm import AxoniumProvider
-from cea_rag import embeber_consulta
+from cea_rag import Pasaje, embeber_consulta, reordenar
 from psycopg_pool import AsyncConnectionPool
 
 from .politica import Politica
@@ -48,11 +48,13 @@ class Llamada:
         bus: EventBus,
         pool: AsyncConnectionPool,
         proveedor: AxoniumProvider,
+        reordenar_pasajes: bool = True,
     ) -> None:
         self._call_id = call_id
         self._bus = bus
         self._pool = pool
         self._proveedor = proveedor
+        self._reordenar = reordenar_pasajes
 
         self._politica = Politica()
         self._contexto: CallContext | None = None
@@ -187,6 +189,7 @@ class Llamada:
                 consulta_kb=consulta,
                 vector=vector,
                 tono=tono,
+                reordenador=self._reordenador if self._reordenar else None,
             )
 
         # El texto sólo se publica si pasó los guardarraíles.
@@ -219,16 +222,25 @@ class Llamada:
             sugerencia.ttft_ms,
         )
 
-    def _consulta(self, texto: str) -> str:
-        """Consulta a la base de conocimiento.
+    async def _reordenador(self, consulta: str, pasajes: list[Pasaje], cuantos: int):
+        return await reordenar(self._proveedor, consulta, pasajes, devolver=cuantos)
 
-        Al turno se le añade la intención predicha. Un turno como "¿y esto qué
-        es?" no recupera nada por sí solo; con "cargo no reconocido" delante
-        recupera el procedimiento de disputa.
+    def _consulta(self, texto: str) -> str:
+        """Consulta a la base de conocimiento: el turno del cliente, tal cual.
+
+        Aquí estuvo antepuesta la intención predicha, con el razonamiento de que
+        un turno vago como "¿y esto qué es?" no recupera nada por sí solo. La
+        medición lo desmintió: sobre el conjunto de evaluación el prefijo baja
+        el acierto en primera posición del 85% al 54% y la cobertura del 92% al
+        77%. Arrastra TODA consulta hacia los documentos de la intención, de modo
+        que un cliente que en mitad de una disputa pregunta cuánto cuesta
+        reponer el plástico recibe el procedimiento de disputas.
+
+        El caso que el prefijo quería rescatar apenas llega hasta aquí: la
+        política no genera sugerencia para turnos de menos de cinco palabras, que
+        es donde caen los turnos demasiado vagos para recuperar nada.
         """
-        if self._contexto is None:
-            return texto
-        return f"{self._contexto.intent.intent.value} {texto}"
+        return texto
 
     async def _publicar(self, evento: BaseEvent) -> None:
         await self._bus.publish(evento)

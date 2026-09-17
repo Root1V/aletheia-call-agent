@@ -13,6 +13,7 @@ dos y se fusionan.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 # Constante de la fusión recíproca de rangos.
@@ -36,6 +37,15 @@ class Pasaje:
     origen: str
     """De qué búsqueda vino: lexica, densa o ambas. Sirve para depurar por qué
     apareció algo y para medir cuánto aporta cada lado."""
+
+
+Reordenador = Callable[[str, list["Pasaje"], int], Awaitable[list["Pasaje"]]]
+"""Cómo se reordena, sin decir con qué.
+
+Va como función y no como clase para que `cea_rag` no dependa del proveedor de
+modelos: la búsqueda es la capa que tiene que seguir funcionando cuando la
+plataforma de inferencia no está.
+"""
 
 
 def fusionar_rrf(
@@ -112,6 +122,7 @@ async def buscar(
     *,
     candidatos: int = 30,
     devolver: int = 5,
+    reordenador: Reordenador | None = None,
 ) -> list[Pasaje]:
     """Recupera los pasajes más relevantes.
 
@@ -119,6 +130,11 @@ async def buscar(
     Recuperar ancho y recortar después es lo que permite que un documento que
     una de las dos búsquedas puso en el puesto veinte suba si la otra lo puso
     arriba.
+
+    Con `reordenador`, el recorte a `devolver` lo hace un cross-encoder sobre
+    TODOS los candidatos en lugar de la posición en RRF. Sin él se conserva el
+    orden de la fusión: la búsqueda no depende de que la plataforma de
+    inferencia esté disponible.
     """
     await cur.execute(SQL_LEXICA, {"consulta": consulta, "limite": candidatos})
     lexica = [f["chunk_id"] for f in await cur.fetchall()]
@@ -132,13 +148,18 @@ async def buscar(
     if not fusionado:
         return []
 
-    mejores = sorted(fusionado.items(), key=lambda kv: kv[1][0], reverse=True)[:devolver]
+    # Con reordenador se materializan TODOS los candidatos, no sólo los que
+    # RRF dejó arriba: el sentido de reordenar es que un pasaje del puesto
+    # quince pueda ser el primero, y recortar antes haría imposible que lo
+    # fuera.
+    tope = len(fusionado) if reordenador is not None else devolver
+    mejores = sorted(fusionado.items(), key=lambda kv: kv[1][0], reverse=True)[:tope]
     ids = [cid for cid, _ in mejores]
 
     await cur.execute(SQL_DETALLE, {"ids": ids})
     detalle = {f["chunk_id"]: f for f in await cur.fetchall()}
 
-    return [
+    pasajes = [
         Pasaje(
             chunk_id=cid,
             document_id=detalle[cid]["document_id"],
@@ -151,3 +172,7 @@ async def buscar(
         for cid, (puntos, origen) in mejores
         if cid in detalle
     ]
+
+    if reordenador is None:
+        return pasajes
+    return await reordenador(consulta, pasajes, devolver)

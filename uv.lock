@@ -85,16 +85,16 @@ wheels = [
 
 [[package]]
 name = "axonium"
-version = "1.0.0rc3"
+version = "1.0.0rc4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "pydantic", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "pydantic-settings", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7f/e6/25b213fae5ba40c1bed407db343f38f1e3578e1ea2ff25898c06d4f3e1fd/axonium-1.0.0rc3.tar.gz", hash = "sha256:b63032e04f4bb9a84d47228e0bfe6413d480a6b1027d892a2b30aa0cfab5ed7a", size = 157537, upload-time = "2026-09-13T16:55:22.579Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/25/38/3f52979fa73feacb95e53824fcd6eeaed8341ed50979f65b0c2b9ff048b1/axonium-1.0.0rc4.tar.gz", hash = "sha256:a96ba408c00fa17e9b2848ee38e1c9c6d736ffb47c3ed4cb3c98709f8b1f32b6", size = 173495, upload-time = "2026-09-16T12:01:45.918Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/22/ca/4236a31872d5e7590ac53e9bec41bf3ca59ea830bec03bb45409e012310a/axonium-1.0.0rc3-py3-none-any.whl", hash = "sha256:7d9f58b926bde214d5ad90c1537c7f514e9c6c42f07ca31b0648e9bf2d554b71", size = 62098, upload-time = "2026-09-13T16:55:21.372Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/26/09402f6932c635cdf6ae1cf1b36b4c1da25e5195dc50a47d100b30483511/axonium-1.0.0rc4-py3-none-any.whl", hash = "sha256:4ea4cb8f8824ae75729723d5e205435d052d39ac8da2248a54913b3f4450027b", size = 72456, upload-time = "2026-09-16T12:01:44.502Z" },
 ]
 
 [[package]]
@@ -271,7 +271,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "axonium", specifier = ">=1.0.0rc3" },
+    { name = "axonium", specifier = ">=1.0.0rc4" },
     { name = "cea-contracts", editable = "packages/contracts" },
     { name = "pydantic-settings", specifier = ">=2.6" },
 ]

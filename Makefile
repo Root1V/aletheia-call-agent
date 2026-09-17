@@ -58,6 +58,9 @@ replay:  ## Reproduce un guion como llamada en vivo (SCENARIO=... VEL=...)
 eval-asr:  ## Evalúa el reconocimiento sobre los guiones, limpio y con telefonía
 	uv run python evals/runners/asr_eval.py --detalle
 
+eval-rag:  ## Evalúa la recuperación, con y sin reordenador
+	uv run python evals/runners/rag_eval.py --comparar
+
 api:  ## Arranca la API en :8000
 	uv run uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 

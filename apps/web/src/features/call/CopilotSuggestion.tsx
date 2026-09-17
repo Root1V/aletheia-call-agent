@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Check, FileText, Loader2, Pencil, ShieldAlert, X } from "lucide-react";
+import { Check, FileText, Loader2, Pencil, ShieldAlert, TableProperties, X } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -136,7 +136,7 @@ export function CopilotSuggestion({
 
         {sugerencia.estado === "lista" && sugerencia.citas.length > 0 && (
           <ul className="space-y-1">
-            {sugerencia.citas.slice(0, 2).map((c) => (
+            {sugerencia.citas.map((c) => (
               <li
                 key={c.chunk_id}
                 className="flex items-start gap-1.5 text-xs text-muted-foreground"
@@ -150,6 +150,21 @@ export function CopilotSuggestion({
               </li>
             ))}
           </ul>
+        )}
+
+        {/*
+          Sin citas NO es un error: es el caso más frecuente del flujo de
+          reclamos, donde la frase se construye entera con el comercio real, la
+          fecha y las compras previas de esta llamada. Decirlo importa: es el
+          ejecutivo quien responde si el cliente pregunta de dónde sale el dato,
+          y una referencia al tarifario bajo una frase que no debe nada al
+          tarifario le haría creer que tiene un respaldo que no tiene.
+        */}
+        {sugerencia.estado === "lista" && sugerencia.citas.length === 0 && (
+          <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <TableProperties className="mt-0.5 size-3 shrink-0" />
+            Según los datos de esta llamada, sin respaldo en la base de conocimiento.
+          </p>
         )}
 
         <div className="flex flex-wrap gap-2">

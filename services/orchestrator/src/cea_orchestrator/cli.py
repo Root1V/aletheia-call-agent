@@ -32,7 +32,7 @@ log = logging.getLogger("cea.orquestador")
 CONEXIONES_MAX = 8
 
 
-async def servir(*, redis_url: str, dsn: str) -> int:
+async def servir(*, redis_url: str, dsn: str, reordenar: bool = True) -> int:
     if not obtener_ajustes().hay_credenciales:
         print(CredencialesFaltantes().args[0], file=sys.stderr)
         return 1
@@ -58,7 +58,9 @@ async def servir(*, redis_url: str, dsn: str) -> int:
                 # tarea anterior sigue leyendo un stream que ya se vació.
                 anterior.cancel()
 
-            llamada = Llamada(call_id, bus=bus, pool=pool, proveedor=proveedor)
+            llamada = Llamada(
+                call_id, bus=bus, pool=pool, proveedor=proveedor, reordenar_pasajes=reordenar
+            )
             tareas[call_id] = asyncio.create_task(_atender(llamada, call_id))
     except asyncio.CancelledError:
         pass
@@ -93,6 +95,15 @@ def main(argv: list[str] | None = None) -> int:
         "--dsn",
         default=os.environ.get("CEA_DATABASE_URL", "postgresql://cea:cea_dev@localhost:5432/cea"),
     )
+    p.add_argument(
+        "--sin-reordenador",
+        action="store_true",
+        help=(
+            "Salta el cross-encoder. Ahorra ~260 ms por sugerencia a cambio de citar "
+            "peor: sobre el conjunto de evaluación, el acierto en primera posición "
+            "baja del 85% al 54%."
+        ),
+    )
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
 
@@ -103,7 +114,9 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     try:
-        return asyncio.run(servir(redis_url=args.redis, dsn=args.dsn))
+        return asyncio.run(
+            servir(redis_url=args.redis, dsn=args.dsn, reordenar=not args.sin_reordenador)
+        )
     except KeyboardInterrupt:
         return 0
 

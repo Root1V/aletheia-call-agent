@@ -139,7 +139,13 @@ _VACIAS = {
 }
 
 
-def _normalizar(texto: str) -> list[str]:
+def normalizar(texto: str) -> list[str]:
+    """Términos comparables: sin tildes, sin puntuación, sin palabras vacías.
+
+    Es pública porque la atribución de citas compara con el mismo criterio que
+    la cobertura. Dos normalizaciones distintas harían que un pasaje respaldara
+    la frase para un control y no para el otro.
+    """
     base = unicodedata.normalize("NFKD", texto.lower()).encode("ascii", "ignore").decode("ascii")
     return [p for p in re.sub(r"[^\w\s]", " ", base).split() if p not in _VACIAS and len(p) > 2]
 
@@ -187,8 +193,8 @@ def evaluar(
         bloqueos.append(Bloqueo.CIFRA_NO_VERIFICADA)
         motivos.append(cifras.motivo)
 
-    palabras = _normalizar(limpia)
-    disponibles = set(_normalizar(contexto))
+    palabras = normalizar(limpia)
+    disponibles = set(normalizar(contexto))
     cobertura = sum(1 for p in palabras if p in disponibles) / len(palabras) if palabras else 0.0
     if not hay_pasajes or cobertura < COBERTURA_MINIMA:
         bloqueos.append(Bloqueo.SIN_RESPALDO_DOCUMENTAL)
