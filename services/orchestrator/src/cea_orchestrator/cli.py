@@ -18,7 +18,12 @@ import os
 import sys
 
 from cea_bus import EventBus
-from cea_llm import AxoniumProvider, CredencialesFaltantes, obtener_ajustes
+from cea_llm import (
+    AxoniumProvider,
+    CredencialesFaltantes,
+    asegurar_visibilidad_de_esperas,
+    obtener_ajustes,
+)
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
@@ -33,6 +38,10 @@ CONEXIONES_MAX = 8
 
 
 async def servir(*, redis_url: str, dsn: str, reordenar: bool = True) -> int:
+    # Una espera de la plataforma no puede ser invisible: sin esto, un 429 con
+    # `Retry-After` de treinta segundos se ve como una sugerencia colgada.
+    asegurar_visibilidad_de_esperas()
+
     if not obtener_ajustes().hay_credenciales:
         print(CredencialesFaltantes().args[0], file=sys.stderr)
         return 1

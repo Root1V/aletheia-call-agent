@@ -28,7 +28,12 @@ import time
 from dataclasses import dataclass
 
 import psycopg
-from cea_llm import AxoniumProvider, CredencialesFaltantes, obtener_ajustes
+from cea_llm import (
+    AxoniumProvider,
+    CredencialesFaltantes,
+    asegurar_visibilidad_de_esperas,
+    obtener_ajustes,
+)
 from cea_rag import buscar, embeber_consulta, reordenar
 from psycopg.rows import dict_row
 
@@ -144,6 +149,8 @@ async def main(argv: list[str] | None = None) -> int:
     p.add_argument("--comparar", action="store_true", help="Con y sin, uno detrás de otro.")
     p.add_argument("--devolver", type=int, default=5)
     args = p.parse_args(argv)
+
+    asegurar_visibilidad_de_esperas()
 
     if not obtener_ajustes().hay_credenciales:
         print(CredencialesFaltantes().args[0], file=sys.stderr)

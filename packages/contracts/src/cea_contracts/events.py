@@ -44,11 +44,16 @@ class BaseEvent(BaseModel):
     seq: int = Field(
         default=0,
         description=(
-            "Orden dentro de la llamada; permite replay exacto. Lo asigna el BUS al "
+            "Identificador correlativo dentro de la llamada. Lo asigna el BUS al "
             "publicar, no quien construye el evento: una llamada tiene más de un "
             "escritor —el worker transcribe mientras el orquestador sugiere— y dos "
             "contadores en dos procesos producen el mismo número para eventos "
-            "distintos."
+            "distintos. "
+            "Es ÚNICO, pero no es el orden: el orden lo da el identificador del "
+            "stream, que Redis asigna de forma atómica al escribir. Reservar el "
+            "número y escribir son dos operaciones, así que con dos escritores a la "
+            "vez el evento que reservó el 7 puede quedar escrito antes que el del 6. "
+            "Ordenar por `seq` en lugar de por llegada devolvería ese par invertido."
         ),
     )
 

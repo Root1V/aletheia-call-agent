@@ -10,8 +10,10 @@ from .base import (
     Respuesta,
 )
 from .config import AjustesLLM, obtener_ajustes
+from .registro import REGISTRO_SDK, asegurar_visibilidad_de_esperas
 
 __all__ = [
+    "REGISTRO_SDK",
     "AjustesLLM",
     "AxoniumProvider",
     "Catalogo",
@@ -21,5 +23,6 @@ __all__ = [
     "Mensaje",
     "ProveedorLLM",
     "Respuesta",
+    "asegurar_visibilidad_de_esperas",
     "obtener_ajustes",
 ]

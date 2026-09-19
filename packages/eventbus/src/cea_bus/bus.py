@@ -93,8 +93,15 @@ class EventBus:
         El `seq` lo asigna aquí un contador atómico de la llamada, y se ignora
         el que traiga el evento. Una llamada tiene más de un escritor —el worker
         transcribe mientras el orquestador sugiere— y dos contadores en dos
-        procesos acaban dando el mismo número a eventos distintos: el replay
-        deja de ser reproducible y el portal ordena mal.
+        procesos acaban dando el mismo número a eventos distintos.
+
+        Reservar el número y escribir son dos comandos, no uno, así que con dos
+        escritores concurrentes el `seq` y el orden del stream pueden discrepar
+        en una posición. No se sincronizan a propósito: **el orden es el del
+        stream**, que Redis fija al escribir, y `seq` es un identificador
+        correlativo. Mantener dos ordenaciones en sincronía perfecta exigiría un
+        script Lua para tener un dato que ya se tiene, y dejaría dos fuentes de
+        verdad para lo mismo — que es el problema, no la solución.
         """
         clave = clave_de_stream(evento.call_id)
         evento = evento.model_copy(

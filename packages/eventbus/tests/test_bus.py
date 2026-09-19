@@ -182,11 +182,12 @@ async def test_dos_escritores_no_repiten_el_numero_de_secuencia(bus, call_id) ->
 
     El worker transcribe mientras el orquestador publica sugerencias sobre la
     misma llamada. Cuando cada proceso llevaba su propio contador, los dos
-    numeraban desde el mismo sitio y el replay dejaba de ser reproducible: dos
-    eventos distintos con el mismo `seq`, y el portal ordenándolos a capricho.
+    numeraban desde el mismo sitio: dos eventos distintos con el mismo `seq`.
 
-    El contador vive en Redis y es atómico, así que da igual cuántos procesos
-    publiquen a la vez.
+    Se comprueba la UNICIDAD, no que el orden del stream siga al del `seq`.
+    Reservar el número y escribir son dos comandos, así que dos escritores
+    concurrentes pueden invertir un par, y esta misma prueba lo pilló afirmando
+    de más. El orden lo da el stream; `seq` identifica.
     """
     otro = EventBus.desde_url(REDIS_URL, bloqueo_ms=500)
     try:
@@ -214,7 +215,7 @@ async def test_dos_escritores_no_repiten_el_numero_de_secuencia(bus, call_id) ->
 
     assert len(secuencias) == 50
     assert len(set(secuencias)) == 50, "hay números de secuencia repetidos"
-    assert secuencias == sorted(secuencias), "el orden del stream no sigue al del seq"
+    assert sorted(secuencias) == list(range(1, 51)), "la numeración tiene huecos o saltos"
 
 
 async def test_el_reset_devuelve_la_numeracion_al_principio(bus, call_id) -> None:

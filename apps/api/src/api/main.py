@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
+from cea_llm import asegurar_visibilidad_de_esperas
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -30,6 +31,10 @@ async def lifespan(app: FastAPI):
             + "':\n  - "
             + "\n  - ".join(problemas)
         )
+
+    # La API corre con `--log-level warning` a propósito, así que una espera del
+    # SDK a INFO se descartaría. Se hace visible sin tocar el nivel de la raíz.
+    asegurar_visibilidad_de_esperas()
 
     await open_pool(settings.database_url)
     log.info("API lista (auth=%s, entorno=%s)", settings.auth_mode, settings.environment)
