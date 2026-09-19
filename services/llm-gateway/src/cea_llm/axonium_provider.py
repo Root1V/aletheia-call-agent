@@ -7,6 +7,7 @@ import time
 from collections.abc import AsyncIterator
 
 from axonium import AsyncAxonium, AxoniumError
+from axonium.transport.retry import RetryPolicy
 
 from .base import Catalogo, EsfuerzoRazonamiento, Fragmento, Mensaje, ProveedorLLM, Respuesta
 from .config import AjustesLLM, obtener_ajustes
@@ -66,6 +67,9 @@ class AxoniumProvider(ProveedorLLM):
             self._cliente = AsyncAxonium(
                 client_id=self._ajustes.client_id,
                 client_secret=self._ajustes.client_secret,
+                # El tope de espera es lo que separa "el copiloto se calló" de
+                # "el copiloto contestó al turno de hace medio minuto".
+                retry=RetryPolicy(max_backoff=self._ajustes.espera_maxima_s),
                 **extra,
             )
         return self._cliente

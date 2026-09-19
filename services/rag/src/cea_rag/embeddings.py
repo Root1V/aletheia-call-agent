@@ -8,7 +8,12 @@ todo eso para nada.
 
 from __future__ import annotations
 
+import logging
+
+from axonium import AxoniumError
 from cea_llm import AxoniumProvider
+
+log = logging.getLogger("cea.rag")
 
 # Modelo de embeddings por defecto.
 #
@@ -41,11 +46,24 @@ async def embeber_consulta(
     texto: str,
     modelo: str = MODELO_POR_DEFECTO,
 ) -> list[float] | None:
-    """Vector de una consulta, o None si la plataforma no responde.
+    """Vector de una consulta, o None si la plataforma no lo puede dar.
 
     Devolver None en lugar de propagar es deliberado: la búsqueda es híbrida y
     la mitad léxica sigue funcionando sin vector. Que el copiloto conteste algo
     peor es mejor que no conteste, y el fallo queda en el log.
+
+    Importa sobre todo cuando se agota el cupo: `embeddings` y `rerank`
+    comparten presupuesto de peticiones y `chat` tiene el suyo, así que quedarse
+    sin vector NO significa quedarse sin sugerencia. Significa una sugerencia
+    con los pasajes peor ordenados, que es una degradación y no una caída.
+
+    Sólo se traga el fallo DE LA PLATAFORMA. Un error de programación aquí
+    —un modelo mal escrito, un tipo equivocado— tiene que llegar arriba y
+    romper, no convertirse en una búsqueda silenciosamente peor.
     """
-    vectores = await embeber(proveedor, [texto], modelo)
+    try:
+        vectores = await embeber(proveedor, [texto], modelo)
+    except AxoniumError:
+        log.warning("Sin embedding de consulta; se busca sólo por léxico", exc_info=True)
+        return None
     return vectores[0] if vectores else None

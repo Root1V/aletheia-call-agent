@@ -13,6 +13,7 @@ import contextlib
 import logging
 import uuid
 
+from axonium.errors import RateLimitError
 from cea_bus import EventBus
 from cea_contracts import (
     BaseEvent,
@@ -36,6 +37,21 @@ log = logging.getLogger("cea.orquestador")
 # "redactando" al recibir `suggestion.started`, y sin este cierre se quedaría
 # girando para siempre.
 SUPERADA = "El cliente siguió hablando; esta respuesta ya no venía al caso."
+
+# Qué se le dice al ejecutivo cuando falla la plataforma de modelos.
+#
+# No el mensaje de la excepción: lleva identificadores de petición y nombres de
+# endpoint que no significan nada en una silla de atención al cliente, y que
+# además no debería estar leyendo mientras habla con alguien.
+FALLO_DE_PLATAFORMA = "El servicio de modelos no respondió a tiempo. Continúe usted."
+SIN_CUPO = "El servicio de modelos está saturado ahora mismo. Continúe usted."
+
+
+def _motivo_legible(error: Exception) -> str:
+    """Traduce el fallo a algo accionable por quien está al teléfono."""
+    if isinstance(error, RateLimitError):
+        return SIN_CUPO
+    return FALLO_DE_PLATAFORMA
 
 
 class Llamada:
@@ -171,26 +187,43 @@ class Llamada:
         tono, etiqueta = instruccion(self._emocion)
         consulta = self._consulta(texto)
 
-        try:
-            vector = await embeber_consulta(self._proveedor, consulta)
-        except Exception:  # noqa: BLE001
-            # La búsqueda es híbrida: sin vector queda la mitad léxica, que
-            # sigue encontrando el tarifario. Peor respuesta es mejor que
-            # ninguna, y el fallo queda registrado.
-            log.warning("Sin embedding de consulta en %s; se busca sólo por léxico", self._call_id)
-            vector = None
+        # Sin vector la búsqueda sigue por la mitad léxica: `embeddings` y
+        # `rerank` comparten cupo y `chat` tiene el suyo, así que quedarse sin
+        # el uno no deja sin sugerencia. La degradación la decide `cea_rag`,
+        # que es quien sabe qué pierde la búsqueda al faltarle el vector.
+        vector = await embeber_consulta(self._proveedor, consulta)
 
-        async with self._pool.connection() as conn, conn.cursor() as cur:
-            sugerencia = await generar(
-                cur,
-                self._proveedor,
-                turno_del_cliente=texto,
-                datos_de_la_llamada=resumir(self._contexto) if self._contexto else "",
-                consulta_kb=consulta,
-                vector=vector,
-                tono=tono,
-                reordenador=self._reordenador if self._reordenar else None,
+        try:
+            async with self._pool.connection() as conn, conn.cursor() as cur:
+                sugerencia = await generar(
+                    cur,
+                    self._proveedor,
+                    turno_del_cliente=texto,
+                    datos_de_la_llamada=resumir(self._contexto) if self._contexto else "",
+                    consulta_kb=consulta,
+                    vector=vector,
+                    tono=tono,
+                    reordenador=self._reordenador if self._reordenar else None,
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            # Un fallo de la plataforma tiene que CERRAR la tarjeta, no dejarla
+            # girando. Sin esto, la excepción muere dentro de la tarea, el
+            # `suggestion.completed` no se publica nunca y el portal se queda
+            # con el "redactando…" para siempre: el ejecutivo no sabe si debe
+            # seguir esperando o hablar.
+            log.exception("La generación falló en %s", self._call_id)
+            await self._publicar(
+                SuggestionCompleted(
+                    call_id=self._call_id,
+                    suggestion_id=suggestion_id,
+                    text="",
+                    blocked=True,
+                    blocked_reason=_motivo_legible(e),
+                )
             )
+            return
 
         # El texto sólo se publica si pasó los guardarraíles.
         #
