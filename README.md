@@ -1,4 +1,11 @@
-# Copiloto de Atención al Cliente Bancario
+# Aletheia
+
+> *ἀλήθεια* — lo que deja de estar oculto.
+
+El caso insignia de este proyecto es un cargo que el cliente mira en su estado
+de cuenta, no reconoce, y está a punto de disputar. Dice **SUNRISE TECH**. Es
+**inDrive**, un viaje suyo al aeropuerto, desde su propio teléfono, el sexto en
+noventa días. No hacía falta investigar nada: hacía falta dejar de ocultarlo.
 
 Asistente en tiempo real para ejecutivos de atención telefónica de un banco.
 Todo el stack es **open source y auto-hospedable**: no hay ningún servicio
