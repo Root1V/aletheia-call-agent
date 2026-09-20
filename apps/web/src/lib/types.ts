@@ -4,8 +4,11 @@
  * Se escribe a mano y no se genera para mantener el frontend sin paso de build
  * extra, pero eso abre riesgo de deriva: si alguien cambia un campo en Pydantic
  * y no aquí, el error aparece en tiempo de ejecución y no de compilación.
- * `npm run check:contracts` compara ambos lados contra el JSON Schema que
- * publica la API y falla si divergen.
+ * `packages/contracts/tests/test_espejo_typescript.py` compara ambos lados en
+ * cada ejecución de la suite: nombres de campo y anulabilidad, que es donde
+ * ocurre la deriva. Existe porque ya ocurrió — `proposed_type` era obligatorio
+ * en Pydantic y anulable aquí, y la llamada que se resuelve sin abrir caso
+ * reventaba al publicar el evento sin que el portal se enterase.
  */
 
 export type Speaker = "customer" | "agent";
@@ -245,6 +248,35 @@ export interface SuggestionCompletedEvent {
   latency_ms: number | null;
 }
 
+export interface DraftCase {
+  case_id: string;
+  folio: string;
+  customer_id: string;
+  case_type: CaseType;
+  status: string;
+  opened_at: string;
+  /** Vencimiento del plazo regulatorio: 15 días hábiles bajo la Ley 31763. */
+  due_at: string;
+  subject: string;
+  summary: string | null;
+  related_transaction_id: string | null;
+}
+
+export interface CaseClassifiedEvent {
+  type: "case.classified";
+  call_id: string;
+  seq: number;
+  ts_ms: number;
+  /** null cuando la llamada se resolvió sin abrir caso. */
+  proposed_type: CaseType | null;
+  confidence: number;
+  rationale: string;
+  evidence_turn_ids: string[];
+  citations: Citation[];
+  confirmed_by_agent: boolean | null;
+  draft_case: DraftCase | null;
+}
+
 export interface StreamControlEvent {
   type: "stream.ready" | "stream.heartbeat";
   call_id?: string;
@@ -258,6 +290,7 @@ export type EventoConocido =
   | CallEndedEvent
   | SuggestionStartedEvent
   | SuggestionCompletedEvent
+  | CaseClassifiedEvent
   | StreamControlEvent;
 
 /**
@@ -336,4 +369,15 @@ export interface SugerenciaViva {
   latenciaMs: number | null;
   /** Qué hizo el ejecutivo. Se guarda para no volver a mostrarla tras descartarla. */
   resuelta: boolean;
+}
+
+/** La clasificación propuesta, tal como la pinta el portal. */
+export interface ClasificacionViva {
+  tipo: CaseType | null;
+  confianza: number;
+  justificacion: string;
+  turnosDeEvidencia: string[];
+  borrador: DraftCase | null;
+  /** Qué hizo el ejecutivo: confirmar, corregir, o nada todavía. */
+  decision: "pendiente" | "confirmada" | "corregida";
 }

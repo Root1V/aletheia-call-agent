@@ -119,7 +119,7 @@ más rápida de perder la confianza.
 | 1 | Transcripción en vivo (ASR en streaming + bus + WebSocket) | ✅ parcial |
 | 3 | Emoción del cliente en tiempo real | ✅ parcial |
 | 4 | RAG y sugerencia generativa con citación obligatoria | ✅ |
-| 5 | Clasificación reclamo/requerimiento (Ley 31763) | pendiente |
+| 5 | Clasificación reclamo/requerimiento (Ley 31763) | ✅ |
 | 6 | Resumen y tipificación post-llamada | pendiente |
 | 7 | Endurecimiento: PII, auditoría, RBAC, observabilidad | ✅ parcial (PII) |
 
@@ -219,6 +219,28 @@ anterior hace que deje de leerlas, y la sobrecarga cognitiva —no la calidad de
 modelo— es la causa número uno de abandono de estas herramientas. Cuando el
 copiloto no sugiere, el log dice por qué: "no sugirió" sin causa es
 indistinguible de un fallo.
+
+**Las reglas clasifican, el modelo sólo redacta el porqué.** Clasificar un
+reclamo como requerimiento priva al usuario del plazo de quince días hábiles y
+de la vía de escalamiento a la SBS: es un incumplimiento, y tiene que poder
+explicarse ante un auditor con la regla que se aplicó. La regla que gobierna
+está en el procedimiento del banco: *ante la duda se registra como reclamo*. La
+justificación que escribe el modelo no puede contradecir el veredicto ni inventar
+cifras; si lo hace se conserva el enunciado de la regla y el descarte queda
+registrado.
+
+Y las señales salen sólo de los turnos del CLIENTE. Si el clasificador se apoyara
+en lo que dice el ejecutivo —"vamos a registrar un reclamo formal"— no haría más
+que repetirle lo que acaba de decidir, y sería ciego al único caso que importa:
+que NO lo registre.
+
+**El copiloto no sugiere sobre un cierre de cortesía.** Es donde el modelo
+confabula. Ante "De acuerdo, gracias por la ayuda" escribió tres veces de tres
+*«le informo que se ha generado el folio correspondiente para atender su
+reclamo»*: no existe tal folio, y el ejecutivo se lo habría dicho al cliente. Los
+guardarraíles lo bloquearon las tres veces, pero el arreglo correcto es no
+pedirlo — un modelo sin material contesta igual, y lo que inventa cuando no tiene
+nada que decir es justo lo que más daño hace.
 
 **Una cita tiene que respaldar la frase, no acompañarla.** Citar el primer
 pasaje recuperado es lo cómodo, y produce referencias falsas: en el flujo de
@@ -332,6 +354,7 @@ services/
   llm-gateway/         acceso a modelos vía el SDK de Axonium
   rag/                 base de conocimiento: troceado, búsqueda híbrida, cifras citables
   copilot/             la frase que se dice en voz alta: prompt, tono y guardarraíles
+  reclamos/            Ley 31763: reglas de clasificación, plazo y justificación
   orchestrator/        qué sugerir y cuándo, sobre la llamada en vivo
 evals/
   scenarios/           guiones reproducibles

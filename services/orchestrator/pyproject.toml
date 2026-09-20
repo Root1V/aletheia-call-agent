@@ -7,6 +7,7 @@ dependencies = [
     "cea-contracts",
     "cea-bus",
     "cea-copilot",
+    "cea-reclamos",
     "cea-rag",
     "cea-llm",
     "psycopg[binary,pool]>=3.2",

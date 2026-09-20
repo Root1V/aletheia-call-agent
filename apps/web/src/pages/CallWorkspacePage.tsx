@@ -7,6 +7,7 @@ import { Cargando, ErrorDeCarga } from "@/components/StateMessage";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card } from "@/components/ui/card";
+import { CaseClassification } from "@/features/call/CaseClassification";
 import { ContextTiming } from "@/features/call/ContextTiming";
 import { CopilotSuggestion } from "@/features/call/CopilotSuggestion";
 import { EmotionBars } from "@/features/call/EmotionBars";
@@ -30,6 +31,8 @@ export function CallWorkspacePage() {
     estado: estadoStream,
     sugerencia,
     resolverSugerencia,
+    clasificacion,
+    decidirClasificacion,
   } = useCallStream(callId);
 
   const contexto = useQuery({
@@ -124,9 +127,14 @@ export function CallWorkspacePage() {
               sugerencia={sugerencia}
               onResolver={resolverSugerencia}
             />
-            <PendingPanel titulo="Clasificación del caso" fase="Fase 5">
-              Propuesta de reclamo o requerimiento bajo la Ley 31763, con su justificación y la
-              evidencia de la conversación, para que el ejecutivo confirme o corrija.
+            <CaseClassification
+              clasificacion={clasificacion}
+              onDecidir={decidirClasificacion}
+            />
+            <PendingPanel titulo="Cierre de la llamada" fase="Fase 6">
+              Resumen, tipificación y compromisos extraídos al colgar, listos para copiar al
+              sistema de casos. Hoy son los tres minutos de trabajo posterior que el 54% de las
+              llamadas exige.
             </PendingPanel>
             </div>
           </div>

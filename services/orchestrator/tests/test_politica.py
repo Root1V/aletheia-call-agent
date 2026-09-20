@@ -103,3 +103,70 @@ def test_el_umbral_de_palabras_es_el_declarado() -> None:
     assert politica.evaluar(Speaker.CUSTOMER, justo) is None
     politica.ultima_emision = 0.0
     assert politica.evaluar(Speaker.CUSTOMER, una_menos) is not None
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "De acuerdo, gracias por la ayuda",
+        "No, eso era todo. Muchas gracias.",
+        "Sí, claro, perfecto, muy amable, muchas gracias",
+        "Buenos días, muchas gracias señorita",
+        "Listo, entendido, muchas gracias, hasta luego",
+        "Ya está, muchas gracias por su tiempo",
+    ],
+)
+def test_no_sugiere_sobre_un_cierre_de_cortesia(texto: str) -> None:
+    """Es donde el modelo confabula, y el daño es directo.
+
+    Todos los casos pasan de cinco palabras a propósito: si fueran más cortos
+    los silenciaría el umbral de longitud y la prueba pasaría sin ejercitar nada
+    del filtro de cierre — verde por el motivo equivocado, que es peor que roja.
+
+    Medido sobre una llamada real: ante "De acuerdo, gracias por la ayuda" el
+    modelo escribió tres veces de tres «le informo que se ha generado el folio
+    correspondiente para atender su reclamo». No existe tal folio —el registro
+    de casos está en el backlog— y el ejecutivo se lo habría dicho al cliente.
+
+    Los guardarraíles la bloquearon las tres veces, pero el arreglo correcto es
+    no pedirla: un modelo sin material contesta igual, y lo que inventa cuando no
+    tiene nada que decir es justo lo que más daño hace.
+    """
+    politica, _ = _politica()
+    motivo = politica.evaluar(Speaker.CUSTOMER, texto)
+    assert motivo is not None
+    assert "cortesía" in motivo or "cierre" in motivo
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "Está bien, y el dinero me lo devuelven",
+        "Gracias, pero quiero saber cuánto cuesta la membresía",
+        "No estoy de acuerdo con esa comisión",
+        "Ah, ya caigo, fui al aeropuerto, disculpe la molestia",
+    ],
+)
+def test_una_formula_de_cortesia_no_silencia_lo_que_viene_detras(texto: str) -> None:
+    """El filtro de cierre no puede comerse una pregunta real.
+
+    "Está bien, ¿y el dinero me lo devuelven?" empieza con una fórmula y es la
+    pregunta más importante de una disputa. Un criterio que contara las palabras
+    sobrantes la silenciaba —quedan dos—, y por eso el cierre se reconoce por
+    VOCABULARIO: sólo calla si TODO lo que dice el turno es cortesía.
+    """
+    politica, _ = _politica()
+    assert politica.evaluar(Speaker.CUSTOMER, texto) is None
+
+
+def test_las_listas_se_comparan_normalizadas() -> None:
+    """La trampa silenciosa: "señorita" llega como "senorita".
+
+    El turno se normaliza a ASCII antes de comparar, así que una lista escrita
+    con eñe o con tilde no casa nunca. La palabra parece estar y no está, y sólo
+    se descubre probando.
+    """
+    from cea_orchestrator.politica import _CIERRE
+
+    assert "senorita" in _CIERRE
+    assert "señorita" not in _CIERRE

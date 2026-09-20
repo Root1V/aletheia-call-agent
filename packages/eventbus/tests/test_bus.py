@@ -284,3 +284,40 @@ def _contexto_minimo(call_id: str):
         intent=IntentPrediction(intent=CallIntent.DISPUTA_CARGO_NO_RECONOCIDO, confidence=0.9),
         generated_at=datetime.now(UTC),
     )
+
+
+async def test_un_evento_ilegible_no_deja_el_historial_en_blanco(bus, call_id) -> None:
+    """La suscripción ya se protegía de esto; el historial no.
+
+    Se notó con un cambio de contrato: un proceso con la versión anterior no
+    sabía leer un campo nuevo, `history()` lanzaba, y el portal mostraba "sin
+    conexión con el servidor de la llamada" sobre una conversación que estaba
+    entera en Redis. Perder un evento es aceptable; perder la llamada no.
+    """
+    from cea_bus import clave_de_stream
+
+    await bus.publish(
+        AsrFinal(
+            call_id=call_id,
+            speaker=Speaker.CUSTOMER,
+            turn_id="t1",
+            text="no reconozco este cargo",
+            started_at_ms=0,
+            ended_at_ms=900,
+        )
+    )
+    redis = Redis.from_url(REDIS_URL, decode_responses=True)
+    try:
+        # Un evento con un campo que esta versión no sabe validar.
+        await redis.xadd(
+            clave_de_stream(call_id),
+            {"payload": '{"type":"case.classified","call_id":"x","proposed_type":"inventado"}'},
+        )
+    finally:
+        await redis.aclose()
+    await bus.publish(CallEnded(call_id=call_id, duration_ms=1000))
+
+    historial = await bus.history(call_id)
+
+    tipos = [e.type for _i, e in historial]
+    assert tipos == ["asr.final", "call.ended"], "se perdieron eventos legibles por uno corrupto"

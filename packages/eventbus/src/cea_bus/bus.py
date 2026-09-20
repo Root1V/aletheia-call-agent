@@ -188,7 +188,20 @@ class EventBus:
         conversación completa y no una pantalla en blanco.
         """
         crudos = await self._redis.xrange(clave_de_stream(call_id), count=limite)
-        return [(i, _ADAPTADOR.validate_json(c["payload"])) for i, c in crudos]
+        eventos: list[tuple[str, BaseEvent]] = []
+        for ident, campos in crudos:
+            try:
+                eventos.append((ident, _ADAPTADOR.validate_json(campos["payload"])))
+            except Exception:  # noqa: BLE001
+                # Un evento ilegible no puede dejar la llamada entera en blanco.
+                #
+                # La suscripción ya se protegía de esto y el historial no, y la
+                # diferencia se notó con un cambio de contrato: un proceso viejo
+                # que no sabía leer un campo nuevo tiraba TODO el historial y el
+                # portal mostraba "sin conexión" sobre una llamada que estaba
+                # entera en Redis. Mejor la conversación sin un evento que nada.
+                log.exception("Evento ilegible en el historial de %s (%s)", call_id, ident)
+        return eventos
 
     async def subscribe(
         self, call_id: str, *, desde: str = "$", bloqueo_ms: int | None = None

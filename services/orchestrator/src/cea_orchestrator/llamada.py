@@ -12,12 +12,16 @@ import asyncio
 import contextlib
 import logging
 import uuid
+from datetime import UTC, datetime
 
 from axonium.errors import RateLimitError
 from cea_bus import EventBus
 from cea_contracts import (
     BaseEvent,
     CallContext,
+    Case,
+    CaseClassified,
+    CaseStatus,
     EmotionLabel,
     Speaker,
     SuggestionCompleted,
@@ -26,6 +30,7 @@ from cea_contracts import (
 from cea_copilot import generar, instruccion, resumir
 from cea_llm import AxoniumProvider
 from cea_rag import Pasaje, embeber_consulta, reordenar
+from cea_reclamos import Desenlace, clasificar, extraer, redactar, vencimiento
 from psycopg_pool import AsyncConnectionPool
 
 from .politica import Politica
@@ -121,6 +126,7 @@ class Llamada:
             self._registrar(evento)
 
             if evento.type == "call.ended":
+                await self._clasificar()
                 break
             if evento.type == "turn.ended":
                 await self._considerar(evento.turn_id)
@@ -261,6 +267,107 @@ class Llamada:
             sugerencia.latencia_ms,
             sugerencia.ttft_ms,
         )
+
+    # ── cierre: clasificación bajo la Ley 31763 ──────────────────────────────
+
+    async def _clasificar(self) -> None:
+        """Propone la clasificación del caso al colgar.
+
+        Se hace al FINAL y no turno a turno porque la decisión depende de la
+        conversación entera: el cliente que abre diciendo "no reconozco este
+        cargo" y a los dos minutos dice "ya caigo, era mío" no genera reclamo, y
+        una clasificación emitida en el primer turno habría dicho lo contrario
+        con la misma confianza.
+        """
+        turnos = [
+            (turn_id, texto)
+            for turn_id, (speaker, texto) in self._textos.items()
+            if speaker is Speaker.CUSTOMER
+        ]
+        if not turnos:
+            return
+
+        dictamen = clasificar(extraer(turnos))
+        if dictamen.desenlace is Desenlace.SIN_MATERIA:
+            # No se propone un caso que nadie pidió: abrir uno por cada llamada
+            # satura la operación y dispara plazos regulatorios sin motivo.
+            log.info("Llamada %s sin materia de caso", self._call_id)
+            return
+
+        datos = resumir(self._contexto) if self._contexto else ""
+        justificacion = await redactar(
+            self._proveedor, dictamen, datos_de_la_llamada=datos, hechos=await self._hechos()
+        )
+
+        await self._publicar(
+            CaseClassified(
+                call_id=self._call_id,
+                proposed_type=dictamen.tipo,
+                confidence=dictamen.confianza,
+                rationale=justificacion.texto,
+                evidence_turn_ids=dictamen.turnos_de_evidencia,
+                draft_case=self._borrador(dictamen) if dictamen.abre_caso else None,
+            )
+        )
+        log.info(
+            "Clasificación de %s: %s (%s, confianza %.2f, justificación %s)",
+            self._call_id,
+            dictamen.desenlace.value,
+            dictamen.tipo.value if dictamen.tipo else "sin tipo",
+            dictamen.confianza,
+            "del modelo"
+            if justificacion.generada
+            else f"de la regla ({justificacion.motivo_del_descarte})",
+        )
+
+    def _borrador(self, dictamen) -> Case | None:
+        """El caso preparado, NO registrado.
+
+        El registro efectivo es una acción ejecutable (RF-16) y está fuera del
+        alcance actual por decisión. Lo que se entrega es el borrador con su
+        folio y su plazo ya calculados, para que el ejecutivo lo revise y lo
+        registre en el sistema del banco.
+        """
+        if self._contexto is None or dictamen.tipo is None:
+            return None
+        ahora = datetime.now(UTC)
+        return Case(
+            case_id=f"borrador-{self._call_id}",
+            # Folio provisional: el definitivo lo emite el sistema de casos al
+            # registrar. Se marca como borrador para que nadie se lo dicte al
+            # cliente creyendo que ya sirve para hacer seguimiento.
+            folio=f"BORRADOR-{uuid.uuid4().hex[:8].upper()}",
+            customer_id=self._contexto.customer.customer_id,
+            case_type=dictamen.tipo,
+            status=CaseStatus.BORRADOR,
+            opened_at=ahora,
+            due_at=vencimiento(ahora),
+            subject=self._asunto(),
+            summary=dictamen.regla,
+            related_transaction_id=self._contexto.focus_transaction_id,
+        )
+
+    def _asunto(self) -> str:
+        if self._contexto is None:
+            return "Caso abierto en llamada"
+        foco = next(
+            (
+                t
+                for t in self._contexto.relevant_transactions
+                if t.transaction_id == self._contexto.focus_transaction_id
+            ),
+            None,
+        )
+        if foco is None:
+            return self._contexto.intent.intent.value.replace("_", " ").capitalize()
+        moneda = "S/" if foco.currency == "PEN" else foco.currency
+        return f"Consumo observado de {moneda} {foco.amount}"
+
+    async def _hechos(self) -> list[tuple[float, str]]:
+        """Cifras citables del tarifario, para verificar la justificación."""
+        async with self._pool.connection() as conn, conn.cursor() as cur:
+            await cur.execute("SELECT value, unit FROM kb_facts")
+            return [(float(f["value"]), f["unit"]) for f in await cur.fetchall()]
 
     async def _reordenador(self, consulta: str, pasajes: list[Pasaje], cuantos: int):
         return await reordenar(self._proveedor, consulta, pasajes, devolver=cuantos)

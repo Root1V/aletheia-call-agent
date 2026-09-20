@@ -329,7 +329,15 @@ class CaseClassified(BaseEvent):
     """
 
     type: Literal["case.classified"] = "case.classified"
-    proposed_type: CaseType
+    proposed_type: CaseType | None = Field(
+        default=None,
+        description=(
+            "None cuando la llamada se resolvió sin abrir caso. No es un hueco: es el "
+            "desenlace de la mayoría de las disputas por cargo no reconocido, donde el "
+            "cliente reconoce el consumo tras la explicación. Abrir un caso por cada una "
+            "satura la operación y dispara plazos de la Ley 31763 sin motivo."
+        ),
+    )
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str = Field(description="Por qué, en lenguaje que el ejecutivo pueda contrastar.")
     evidence_turn_ids: tuple[str, ...] = ()

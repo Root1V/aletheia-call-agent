@@ -1,10 +1,8 @@
 import {
   BarChart3,
-  BookOpen,
   Home,
   PhoneIncoming,
   Settings,
-  Sparkles,
   Users,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -43,17 +41,12 @@ const SECCIONES: Seccion[] = [
       { to: "/clientes", label: "Clientes", icon: Users },
     ],
   },
-  {
-    // "Copiloto" como título de sección, no como nombre de un ítem: tenerlo en
-    // ambos sitios repetía la palabra dos veces en cuatro centímetros, y
-    // "Base de conocimiento" no cabía junto a su etiqueta de fase y se cortaba
-    // en "Base de conoci…".
-    titulo: "Copiloto",
-    items: [
-      { to: "/conocimiento", label: "Conocimiento", icon: BookOpen, fase: "Fase 4" },
-      { to: "/sugerencias", label: "Sugerencias", icon: Sparkles, fase: "Fase 4" },
-    ],
-  },
+  // Aquí hubo dos entradas, "Conocimiento" y "Sugerencias", marcadas como
+  // Fase 4. Se quitan porque engañaban por partida doble: la Fase 4 ya está
+  // construida —el copiloto y la base de conocimiento funcionan dentro de la
+  // llamada— y sus rutas nunca existieron, así que pulsarlas devolvía a inicio
+  // sin decir por qué. Una zona no construida se marca donde se echa en falta,
+  // que es el panel de la llamada, no en un enlace que no lleva a ningún sitio.
   {
     titulo: "Análisis",
     items: [{ to: "/evaluacion", label: "Evaluación", icon: BarChart3 }],

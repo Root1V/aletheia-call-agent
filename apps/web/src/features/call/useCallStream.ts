@@ -9,6 +9,8 @@ import type {
   CallStartedEvent,
   EmotionFrameEvent,
   EstadoEmocional,
+  CaseClassifiedEvent,
+  ClasificacionViva,
   SugerenciaViva,
   SuggestionCompletedEvent,
   SuggestionStartedEvent,
@@ -31,6 +33,7 @@ export function useCallStream(callId: string | undefined) {
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [emocion, setEmocion] = useState<EstadoEmocional | null>(null);
   const [sugerencia, setSugerencia] = useState<SugerenciaViva | null>(null);
+  const [clasificacion, setClasificacion] = useState<ClasificacionViva | null>(null);
   const [estado, setEstado] = useState<Estado>("conectando");
   const wsRef = useRef<WebSocket | null>(null);
   const intentoRef = useRef(0);
@@ -131,7 +134,25 @@ export function useCallStream(callId: string | undefined) {
       return;
     }
 
+    if (es<CaseClassifiedEvent>(ev, "case.classified")) {
+      const e = ev;
+      setClasificacion({
+        tipo: e.proposed_type,
+        confianza: e.confidence,
+        justificacion: e.rationale,
+        turnosDeEvidencia: e.evidence_turn_ids ?? [],
+        borrador: e.draft_case,
+        decision: "pendiente",
+      });
+      return;
+    }
+
     if (ev.type === "call.ended") setEstado("terminada");
+  }, []);
+
+  /** El ejecutivo confirma o corrige la clasificación propuesta. */
+  const decidirClasificacion = useCallback((decision: "confirmada" | "corregida") => {
+    setClasificacion((previa) => (previa ? { ...previa, decision } : previa));
   }, []);
 
   /** Marca la sugerencia como atendida para que deje de ocupar la pantalla. */
@@ -199,8 +220,17 @@ export function useCallStream(callId: string | undefined) {
       setTurnos([]);
       setEmocion(null);
       setSugerencia(null);
+      setClasificacion(null);
     };
   }, [callId, aplicar]);
 
-  return { turnos, emocion, estado, sugerencia, resolverSugerencia };
+  return {
+    turnos,
+    emocion,
+    estado,
+    sugerencia,
+    resolverSugerencia,
+    clasificacion,
+    decidirClasificacion,
+  };
 }
