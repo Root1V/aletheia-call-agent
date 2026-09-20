@@ -54,7 +54,7 @@ from .events import (
     SummaryReady,
     TurnEnded,
 )
-from .tiempo import LIMA, fmt_fecha, fmt_fecha_hora, to_lima
+from .tiempo import LIMA, fmt_fecha, fmt_fecha_hora, habiles_despues, to_lima
 
 __all__ = [
     # audio
@@ -109,5 +109,6 @@ __all__ = [
     "TurnEnded",
     "fmt_fecha",
     "fmt_fecha_hora",
+    "habiles_despues",
     "to_lima",
 ]

@@ -35,10 +35,11 @@ from cea_contracts import (
     DigitalJourneyEvent,
     Transaction,
     TransactionStatus,
+    habiles_despues,
 )
 
 from . import refdata as rd
-from .generator import PeruBankGenerator, Scenario, _habiles_despues
+from .generator import PeruBankGenerator, Scenario
 from .timezone import fmt_fecha
 
 
@@ -417,7 +418,7 @@ def seguimiento_reclamo_por_vencer(gen: PeruBankGenerator, idx: int = 5) -> Scen
         case_type=CaseType.RECLAMO,
         status=CaseStatus.EN_ANALISIS,
         opened_at=abierto,
-        due_at=_habiles_despues(abierto, 15),
+        due_at=habiles_despues(abierto, 15),
         subject=f"Consumo no reconocido de S/ {disputada.amount}",
         summary="El cliente desconoce el consumo y solicita extorno.",
         related_transaction_id=disputada.transaction_id,

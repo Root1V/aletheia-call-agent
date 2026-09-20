@@ -20,6 +20,7 @@ members = [
     "services/rag",
     "services/copilot",
     "services/orchestrator",
+    "services/reclamos",
 ]
 
 [tool.uv]
@@ -59,6 +60,7 @@ cea-llm = { workspace = true }
 cea-rag = { workspace = true }
 cea-copilot = { workspace = true }
 cea-orchestrator = { workspace = true }
+cea-reclamos = { workspace = true }
 cea-agent-worker = { workspace = true }
 
 [dependency-groups]

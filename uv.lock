@@ -27,6 +27,7 @@ members = [
     "cea-llm",
     "cea-orchestrator",
     "cea-rag",
+    "cea-reclamos",
     "cea-redaction",
     "cea-synthetic",
     "customer-executive-assistant",
@@ -318,6 +319,25 @@ requires-dist = [
     { name = "cea-llm", editable = "services/llm-gateway" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2" },
     { name = "pyyaml", specifier = ">=6.0" },
+]
+
+[[package]]
+name = "cea-reclamos"
+version = "0.1.0"
+source = { editable = "services/reclamos" }
+dependencies = [
+    { name = "cea-contracts", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "cea-copilot", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "cea-llm", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+    { name = "cea-rag", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cea-contracts", editable = "packages/contracts" },
+    { name = "cea-copilot", editable = "services/copilot" },
+    { name = "cea-llm", editable = "services/llm-gateway" },
+    { name = "cea-rag", editable = "services/rag" },
 ]
 
 [[package]]

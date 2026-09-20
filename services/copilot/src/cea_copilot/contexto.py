@@ -36,7 +36,10 @@ def _describir(t: Transaction, *, etiqueta: str) -> str:
     # en su estado de cuenta y el panel dice "inDrive". Si el material le da al
     # modelo sólo el nombre resuelto, la sugerencia nombra un comercio que el
     # cliente no ve por ninguna parte y la llamada empeora en vez de cerrarse.
-    partes = [f"{etiqueta}: {t.currency} {t.amount}"]
+    # "S/" y no "PEN": es lo que el cliente ve en su estado de cuenta y lo que
+    # el ejecutivo dice en voz alta, así que es también como el modelo redacta.
+    moneda = "S/" if t.currency == "PEN" else t.currency
+    partes = [f"{etiqueta}: {moneda} {t.amount}"]
     if t.merchant:
         partes.append(f"comercio real {t.merchant.display_name}")
         partes.append(f"que el cliente ve en su estado de cuenta como «{t.raw_descriptor}»")

@@ -7,8 +7,8 @@ resista preguntas, y la aritmética regulatoria, que tiene consecuencia legal.
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from cea_contracts import CallIntent, CaseType, TransactionStatus
-from cea_synthetic.generator import PeruBankGenerator, _habiles_despues
+from cea_contracts import CallIntent, CaseType, TransactionStatus, habiles_despues
+from cea_synthetic.generator import PeruBankGenerator
 from cea_synthetic.scenarios import build_all
 from cea_synthetic.timezone import LIMA, fmt_fecha_hora, to_lima
 
@@ -22,10 +22,10 @@ def test_los_dias_habiles_saltan_el_fin_de_semana() -> None:
     # Viernes 4 de setiembre de 2026, 15:00 en Lima.
     viernes = datetime(2026, 9, 4, 15, 0, tzinfo=LIMA).astimezone(UTC)
 
-    un_dia = _habiles_despues(viernes, 1)
+    un_dia = habiles_despues(viernes, 1)
     assert to_lima(un_dia).weekday() == 0, "1 día hábil desde viernes cae lunes"
 
-    quince = _habiles_despues(viernes, 15)
+    quince = habiles_despues(viernes, 15)
     # 15 días hábiles cruzan tres fines de semana: son 21 días corridos.
     assert (to_lima(quince).date() - to_lima(viernes).date()).days == 21
     assert to_lima(quince).weekday() < 5

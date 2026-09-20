@@ -39,7 +39,7 @@ from cea_contracts import (
 from cea_contracts.enums import AuthLevel
 
 from . import refdata as rd
-from .timezone import fmt_fecha, fmt_fecha_hora, to_lima
+from .timezone import fmt_fecha, fmt_fecha_hora
 
 _DOMINIOS = ("gmail.com", "hotmail.com", "outlook.com")
 
@@ -62,23 +62,6 @@ def _poisson(rng: random.Random, lam: float) -> int:
         if p <= limite:
             return k
         k += 1
-
-
-def _habiles_despues(desde: datetime, dias: int) -> datetime:
-    """Suma días hábiles.
-
-    El plazo de la Ley 31763 es en días HÁBILES, no corridos: calcularlo como
-    corridos adelanta el vencimiento y hace que el panel muestre alarmas falsas.
-    No contempla feriados peruanos; eso requiere el calendario oficial y queda
-    anotado como deuda.
-    """
-    actual = to_lima(desde)
-    restantes = dias
-    while restantes > 0:
-        actual += timedelta(days=1)
-        if actual.weekday() < 5:
-            restantes -= 1
-    return actual.astimezone(UTC)
 
 
 @dataclass(slots=True)

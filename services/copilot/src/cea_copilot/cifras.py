@@ -25,9 +25,23 @@ from dataclasses import dataclass
 # Se capturan importes, porcentajes y números sueltos por separado porque la
 # comparación es distinta: 45 y 45.00 son la misma comisión, pero 45 y 45%
 # no son lo mismo en absoluto.
-_IMPORTE = re.compile(r"S/\s*([\d]{1,3}(?:[,\s]\d{3})*(?:[.,]\d{1,2})?)")
+#
+# El número acepta DOS formas y en este orden: con separador de miles
+# ("1,450.00") y sin él ("1450.00"). La versión anterior sólo contemplaba la
+# primera, y el fallo era grave en las dos direcciones: de "S/ 1450.00" extraía
+# 145 —bloqueaba una cifra correcta— y del contexto "PEN 1450.00" no extraía
+# nada, de modo que una justificación que dijera "S/ 145" habría pasado la
+# verificación con el importe real en 1450. Aprobar una cifra equivocada es
+# justamente lo que este módulo existe para impedir.
+#
+# Aparece con importes de cuatro cifras, que en banca peruana son cotidianos:
+# el escenario de fraude son S/ 1,450.00, y nuestro propio generador de contexto
+# los formatea sin separador.
+_CANTIDAD = r"\d{1,3}(?:[,\s]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?"
+
+_IMPORTE = re.compile(rf"S/\s*({_CANTIDAD})")
 _PORCENTAJE = re.compile(r"([\d]+(?:[.,]\d+)?)\s*(?:%|por\s+ciento)")
-_NUMERO = re.compile(r"(?<![\d.,])([\d]{1,3}(?:[,\s]\d{3})*(?:[.,]\d{1,2})?)(?![\d.,%])")
+_NUMERO = re.compile(rf"(?<![\d.,])({_CANTIDAD})(?![\d.,%])")
 
 # Números que no son datos.
 #
@@ -66,7 +80,16 @@ class Cantidad:
     literal: str
 
     def coincide(self, otro: Cantidad) -> bool:
-        if self.unidad != otro.unidad:
+        """¿Son la misma cifra?
+
+        La única unidad que separa de verdad es el PORCENTAJE: 45 y 45% no son
+        lo mismo en absoluto, y confundirlos en un tarifario es un incidente.
+        Un importe y un número suelto del mismo valor sí son la misma cifra
+        dicha de dos maneras, y tratarlos como distintos bloqueaba
+        justificaciones correctas: nuestro propio resumen de la llamada escribe
+        "PEN 1450.00" y el modelo responde "S/ 1450.00".
+        """
+        if (self.unidad == "porcentaje") != (otro.unidad == "porcentaje"):
             return False
         # Tolerancia de un céntimo: "S/ 45" y "S/ 45.00" son la misma comisión.
         return abs(self.valor - otro.valor) < 0.005
@@ -134,9 +157,10 @@ def verificar(sugerencia: str, contexto: str, hechos: list[tuple[float, str]]) -
     los datos de la llamada— y `hechos` son las cifras citables del tarifario
     como pares (valor, unidad).
 
-    Un número suelto se acepta si coincide con cualquier cantidad del contexto
-    sin importar la unidad: el modelo puede escribir "45 soles" donde el
-    documento decía "S/ 45.00", y eso es la misma cifra dicha de otro modo.
+    Importes y números sueltos se comparan sólo por valor: el modelo puede
+    escribir "45 soles" donde el documento decía "S/ 45.00", y al revés. Lo que
+    NO se cruza es el porcentaje, porque 45 y 45% no son la misma cifra y
+    confundirlos en un tarifario es un incidente.
     """
     del_contexto = extraer_cantidades(contexto)
     de_hechos = [Cantidad(v, u, f"{v}") for v, u in hechos]
@@ -146,10 +170,7 @@ def verificar(sugerencia: str, contexto: str, hechos: list[tuple[float, str]]) -
     sin_respaldo: list[Cantidad] = []
 
     for cantidad in extraer_cantidades(sugerencia):
-        if cantidad.unidad == "numero":
-            ok = any(abs(cantidad.valor - d.valor) < 0.005 for d in disponibles)
-        else:
-            ok = any(cantidad.coincide(d) for d in disponibles)
+        ok = any(cantidad.coincide(d) for d in disponibles)
         (respaldadas if ok else sin_respaldo).append(cantidad)
 
     return Verificacion(tuple(respaldadas), tuple(sin_respaldo))
