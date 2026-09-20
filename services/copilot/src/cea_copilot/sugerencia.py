@@ -18,27 +18,32 @@ log = logging.getLogger("cea.copilot")
 
 # Cuántos pasajes se le entregan al modelo.
 #
-# Cinco es el equilibrio: con menos se queda sin material para preguntas que
-# cruzan dos documentos, y con más el modelo empieza a mezclar procedimientos
-# distintos en la misma frase. Se recuperan treinta candidatos y se recortan
-# tras fusionar.
+# TRES, y bajó de cinco por una medición de carga, no por gusto. Cada pasaje son
+# ~300 tokens de prefill que la caché del despliegue NO cubre, porque los pasajes
+# cambian en cada sugerencia. Medido con cuatro generaciones concurrentes:
 #
-# El número tiene un precio medido, y no el que yo creía. Cada pasaje añade
-# ~210 ms al primer token, porque son ~300 tokens más de prefill y los pasajes
-# CAMBIAN en cada sugerencia, así que no los cubre la caché de prefijo del
-# despliegue:
+#     5 pasajes ... p50 7811 ms · 29.3 generaciones/min
+#     2 pasajes ... p50 4228 ms · 45.9 generaciones/min
 #
-#     1 pasaje ....  325 ms      3 pasajes ....  729 ms
-#     2 pasajes ...  561 ms      5 pasajes .... 1166 ms
+# Y lo que cuesta en calidad, medido sobre el conjunto de evaluación con el
+# reordenador puesto:
 #
-# Una medición anterior decía que el primer token era plano entre dos y ocho
-# pasajes. Era falsa: repetía el MISMO prompt, y lo que medía era la caché.
+#     top-5 ... acierto@1 85%  ·  cobertura 13/13 (100%)
+#     top-3 ... acierto@1 85%  ·  cobertura 12/13  (92%)
+#     top-2 ... acierto@1 85%  ·  cobertura 12/13  (92%)
 #
-# Se mantienen cinco porque con el reordenador la cobertura del pasaje correcto
-# sube al 100% (13/13) frente al 92% con tres. Un pasaje que falta no produce
-# una respuesta mala —los guardarraíles la bloquean— sino ninguna respuesta, y
-# el silencio es lo que hace que el ejecutivo deje de mirar el panel.
-PASAJES = 5
+# El acierto en primera posición —lo que el modelo cita— no se mueve: eso lo
+# sostiene el reordenador. Lo que se pierde es una consulta de trece que deja de
+# tener respaldo y se bloquea.
+#
+# Se paga porque con nueve ejecutivos simultáneos el copiloto perdía 59 de 63
+# sugerencias por llegar tarde, y una sugerencia que no llega vale lo mismo que
+# una bloqueada, sólo que sin decir por qué. Tres y no dos porque miden igual y
+# el tercero es margen para la pregunta que cruza dos documentos, que una base de
+# trece trozos no puede ejercitar.
+#
+# **Este número hay que volver a medirlo contra la base real del banco.**
+PASAJES = 3
 CANDIDATOS = 30
 
 # Tope de la generación. Cuarenta palabras son unos 60 tokens en español; el

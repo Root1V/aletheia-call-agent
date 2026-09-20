@@ -61,6 +61,10 @@ eval-asr:  ## Evalúa el reconocimiento sobre los guiones, limpio y con telefon�
 eval-rag:  ## Evalúa la recuperación, con y sin reordenador
 	uv run python evals/runners/rag_eval.py --comparar
 
+carga:  ## Prueba de carga del copiloto (EJECUTIVOS=9 MINUTOS=2). Requiere `make copilot`
+	uv run python evals/runners/carga_copiloto.py \
+		--ejecutivos $(or $(EJECUTIVOS),9) --minutos $(or $(MINUTOS),2)
+
 api:  ## Arranca la API en :8000
 	uv run uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 

@@ -38,6 +38,13 @@ log = logging.getLogger("cea.orquestador")
 # girando para siempre.
 SUPERADA = "El cliente siguió hablando; esta respuesta ya no venía al caso."
 
+# Y el de una llamada que termina con la sugerencia a medio redactar.
+#
+# Sin esto, la ÚLTIMA tarjeta de cada llamada se queda girando para siempre:
+# medido en la prueba de carga, nueve llamadas, nueve tarjetas sin cerrar. El
+# ejecutivo cuelga y el panel sigue diciendo "redactando…".
+COLGADA = "La llamada terminó antes de que estuviera lista."
+
 # Qué se le dice al ejecutivo cuando falla la plataforma de modelos.
 #
 # No el mensaje de la excepción: lleva identificadores de petición y nombres de
@@ -118,7 +125,7 @@ class Llamada:
             if evento.type == "turn.ended":
                 await self._considerar(evento.turn_id)
 
-        await self._cancelar_en_curso()
+        await self._cancelar_en_curso(motivo=COLGADA)
         log.info("Llamada %s terminada", self._call_id)
 
     def _registrar(self, evento: BaseEvent) -> None:
