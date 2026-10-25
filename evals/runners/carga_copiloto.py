@@ -17,6 +17,15 @@ Lo que responde:
 - si el presupuesto de peticiones aguanta (tres bolsas de 60/min desde el 19/09)
 - cuánto se degrada la latencia con carga, que es distinto de medirla con una
   llamada sola
+
+**Lo que NO responde: cuánta capacidad tiene la plataforma.** El orquestador, el
+portal, Docker y el servidor de inferencia corren en la misma máquina que este
+script, así que al medir somos a la vez el instrumento y la carga que lo
+invalida. El equipo de plataforma repitió nuestra prueba mirando qué más estaba
+corriendo: con el portátil moderado dio 28-36 generaciones/min y con la carga
+alta, 8-14. Mismo modelo, mismo prompt, misma concurrencia; un factor 4,3, y la
+variable era el escritorio. Los números de aquí sirven para comparar entre sí —
+tres pasajes contra cinco, con reordenador y sin él— y no para dimensionar nada.
 """
 
 from __future__ import annotations
