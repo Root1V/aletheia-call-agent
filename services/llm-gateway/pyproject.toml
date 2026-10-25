@@ -6,7 +6,7 @@ requires-python = ">=3.12,<3.14"
 license = { text = "Apache-2.0" }
 dependencies = [
     "cea-contracts",
-    "axonium>=1.0.0rc4",
+    "axonium>=1.0.0rc11",
     "pydantic-settings>=2.6",
 ]
 
