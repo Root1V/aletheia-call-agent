@@ -16,9 +16,14 @@ _ADAPTADOR: TypeAdapter = TypeAdapter(Event)
 
 # Cuánto sobrevive el stream de una llamada tras el último evento.
 #
-# Es una red de seguridad para desarrollo, no la política de retención: lo que
-# debe perdurar se persiste en `call_events`, que es la fuente de verdad
-# auditable. Redis aquí es transporte con memoria corta.
+# Redis aquí es transporte con memoria corta, y HOY es lo único que hay.
+#
+# El diseño contempla persistir el stream en `call_events` como fuente de verdad
+# auditable; la tabla existe en la migración y nadie escribe en ella todavía
+# (ver docs/BACKLOG.md §4.1). Mientras siga así, "reproducible" significa
+# "dentro de estas seis horas", y el `suggestion.feedback` —qué hizo el
+# ejecutivo con cada sugerencia, la señal de calidad que no se puede
+# reconstruir después— se publica y se pierde.
 TTL_STREAM = timedelta(hours=6)
 
 # Tope de eventos por llamada en Redis.

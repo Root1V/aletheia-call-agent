@@ -118,17 +118,14 @@ construida con su fase en lugar de rellenarla con datos simulados: en una demo
 para un comité, una transcripción falsa indistinguible de una real es la forma
 más rápida de perder la confianza.
 
-| Fase | Alcance | Estado |
-|---|---|---|
-| 0 | Monorepo, contratos, infraestructura, datos sintéticos | ✅ |
-| — | Autenticación, portal con sidebar, tema claro/oscuro | ✅ |
-| 2 | Contexto de llamada, enriquecimiento, predicción de intención | ✅ |
-| 1 | Transcripción en vivo (ASR en streaming + bus + WebSocket) | ✅ parcial |
-| 3 | Emoción del cliente en tiempo real | ✅ parcial |
-| 4 | RAG y sugerencia generativa con citación obligatoria | ✅ |
-| 5 | Clasificación reclamo/requerimiento (Ley 31763) | ✅ |
-| 6 | Resumen y tipificación post-llamada | pendiente |
-| 7 | Endurecimiento: PII, auditoría, RBAC, observabilidad | ✅ parcial (PII) |
+El detalle vive en dos sitios y no se duplica aquí: **[`ROADMAP.md`](ROADMAP.md)**
+tiene el estado de cada pieza de un vistazo, y **[`docs/BACKLOG.md`](docs/BACKLOG.md)**
+el porqué de lo pendiente, qué se midió y de qué depende.
+
+Hoy hay **dos bloqueantes** que conviene saber antes de clonar: el token de la
+plataforma no tiene concedido ningún modelo de texto —la recuperación funciona,
+la generación no— y el audio sólo entra por reproducción de fichero, sin
+adaptador de telefonía.
 
 La Fase 1 está completa por el camino de reproducción (`FileReplayAdapter`), que
 es el que sostiene los tests y la evaluación. Falta el adaptador de LiveKit para
